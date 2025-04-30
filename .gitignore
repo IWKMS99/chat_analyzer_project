@@ -1,0 +1,150 @@
+# -*- coding: utf-8 -*-
+# Файл .gitignore для Python проектов
+
+# 1. Байт-код и кэш Python
+###########################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 2. Виртуальные окружения
+###########################
+# Исключите директории вашего виртуального окружения (venv, env, .venv, .env и т.д.)
+# Выберите и раскомментируйте или добавьте свое имя папки
+# venv/
+# env/
+.venv/
+# .env/
+# virtualenv/
+# ENV/
+# venv.bak/
+# env.bak/
+
+# Файлы, связанные с pip/requirements
+*.pip
+pip-log.txt
+pip-delete-this-directory.txt
+requirements.txt.orig # Файлы бэкапа от pip-tools
+
+# 3. Артефакты сборки и дистрибуции
+###################################
+build/
+dist/
+downloads/
+eggs/
+*.egg-info/
+*.egg
+*.whl
+MANIFEST
+
+# 4. Локальные настройки и секреты
+#################################
+# Никогда не добавляйте файлы с секретами (API ключи, пароли) в Git!
+# Используйте переменные окружения или другие безопасные методы.
+# Файл .env обычно содержит секреты и должен быть в .gitignore
+.env
+.env.*
+!*.env.example # Но пример файла .env.example можно добавить
+
+# Локальные файлы настроек (пример для Django/Flask)
+local_settings.py
+*.local.py
+instance/ # Flask instance folder
+
+# 5. Файлы IDE и редакторов
+##########################
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+# Раскомментируйте, если не хотите делиться настройками VS Code с командой
+# !.vscode/settings.json
+# !.vscode/tasks.json
+# !.vscode/launch.json
+# !.vscode/extensions.json
+# *.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.sw[op]
+*~
+*.vimrc.local
+
+# Eclipse / PyDev
+.project
+.pydevproject
+.settings/
+
+# 6. Файлы тестирования и покрытия кода
+######################################
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+nosetests.xml
+pytest.xml
+.pytest_cache/
+.tox/
+
+# 7. Базы данных
+################
+# Исключите локальные файлы баз данных (например, для разработки)
+*.db
+*.sqlite
+*.sqlite3
+# Если используете Alembic/миграции, раскомментируйте:
+# alembic.ini.orig
+
+# 8. Документация
+#################
+# Исключите сгенерированную документацию (например, Sphinx)
+docs/_build/
+site/ # MkDocs
+
+# 9. Файлы операционной системы
+#############################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# 10. Разное
+############
+# Логи
+*.log
+logs/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints
+
+# MyPy кэш
+.mypy_cache/
+
+# Ruff кэш
+.ruff_cache/
+
+# pytype
+.pytype/
+
+# Cython артефакты
+cython_debug/
+*.so # Скомпилированные C-расширения (Linux/macOS)
+*.pyd # Скомпилированные C-расширения (Windows)
+
+# Добавьте сюда специфичные для вашего проекта игнорирования:
+# например, папки с загруженными данными, временные файлы и т.д.
+# data_files/
+# temp_output/
