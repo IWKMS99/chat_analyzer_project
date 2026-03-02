@@ -13,3 +13,9 @@ def test_timezone_conversion_changes_hour_to_local():
     localized = _localize_chunk(first_chunk, "Europe/Moscow")
     moscow_hour = int(localized.iloc[0]["hour"])
     assert moscow_hour == (utc_hour + 3) % 24
+
+
+def test_invalid_timezone_falls_back_to_utc():
+    first_chunk = next(iter_chat_chunks(str(FIXTURES / "chat_small.json"), chunk_size=5))
+    localized = _localize_chunk(first_chunk, "RU/Moscow")
+    assert str(localized.iloc[0]["date"].tz) == "UTC"
