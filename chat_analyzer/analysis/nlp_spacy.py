@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 _TOKEN_RE = re.compile(r"[\w\-']+", flags=re.UNICODE)
 _URL_RE = re.compile(r"https?://\S+|www\.\S+", flags=re.IGNORECASE)
 _EMAIL_RE = re.compile(r"\S+@\S+")
+_CYRILLIC_RE = re.compile(r"[а-яА-ЯёЁ]")
+_NEGATIONS = {"не", "нет", "not", "no", "never"}
 
 RU_POSITIVE = {
     "круто", "класс", "отлично", "хорошо", "люблю", "супер", "рад", "счастлив", "спасибо", "красиво",
@@ -76,12 +78,19 @@ def _score_sentiment_tokens(tokens: Sequence[str]) -> float:
         return 0.0
     pos = 0
     neg = 0
-    for token in tokens:
+    for idx, token in enumerate(tokens):
         lower = token.lower()
+        prev_negated = idx > 0 and tokens[idx - 1].lower() in _NEGATIONS
         if lower in RU_POSITIVE or lower in EN_POSITIVE:
-            pos += 1
+            if prev_negated:
+                neg += 1
+            else:
+                pos += 1
         elif lower in RU_NEGATIVE or lower in EN_NEGATIVE:
-            neg += 1
+            if prev_negated:
+                pos += 1
+            else:
+                neg += 1
     return (pos - neg) / max(len(tokens), 1)
 
 
@@ -109,12 +118,12 @@ def process_texts_spacy(
     if ru_model is None and en_model is None:
         return _fallback_tokenize(texts, min_len=min_len)
 
-    # Простая эвристика роутинга: кириллица -> ru, иначе en.
+    # Простая эвристика роутинга: текст с кириллицей -> ru, иначе en.
     ru_indices: List[int] = []
     en_indices: List[int] = []
     clean_texts = [_clean_text(t) for t in texts]
     for idx, text in enumerate(clean_texts):
-        if any("а" <= ch.lower() <= "я" or ch.lower() == "ё" for ch in text):
+        if _CYRILLIC_RE.search(text):
             ru_indices.append(idx)
         else:
             en_indices.append(idx)
