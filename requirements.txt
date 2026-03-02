@@ -1,6 +1,11 @@
 pandas
-matplotlib
-seaborn
-wordcloud
-statsmodels
-scipy
+plotly
+kaleido
+jinja2
+spacy
+networkx
+pyvis
+tzlocal
+ijson
+emoji
+pytest
