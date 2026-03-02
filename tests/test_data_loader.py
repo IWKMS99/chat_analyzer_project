@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -24,8 +25,8 @@ def test_iter_chat_chunks_schema_and_types():
     chunks = list(iter_chat_chunks(str(FIXTURES / "chat_small.json"), chunk_size=2))
     assert chunks
     df = chunks[0]
-    assert {"from", "from_id", "hour", "day_of_week", "is_forwarded", "is_edited", "is_deleted", "reactions"}.issubset(df.columns)
-    assert str(df["hour"].dtype) == "int8"
+    assert {"from", "from_id", "text_length", "is_forwarded", "is_edited", "is_deleted", "reactions"}.issubset(df.columns)
+    assert str(df["text_length"].dtype) == "int32"
 
 
 def test_load_and_process_chat_data_deprecated_wrapper():
@@ -41,3 +42,24 @@ def test_load_and_process_chat_data_empty_messages():
 def test_load_and_process_chat_data_invalid_schema():
     with pytest.raises(InvalidSchemaError):
         list(iter_chat_chunks(str(FIXTURES / "chat_invalid_schema.json")))
+
+
+def test_deleted_message_without_author_is_kept(tmp_path: Path):
+    payload = {
+        "messages": [
+            {
+                "type": "message",
+                "id": 1,
+                "date": "2026-01-01T00:00:00",
+                "media_type": "deleted_message",
+                "text": "",
+            }
+        ]
+    }
+    path = tmp_path / "deleted.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    records = list(iter_chat_messages(str(path), normalize=True))
+    assert len(records) == 1
+    assert records[0].sender == "UnknownUser"
+    assert records[0].is_deleted is True
