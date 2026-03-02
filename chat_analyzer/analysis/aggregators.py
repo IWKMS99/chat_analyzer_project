@@ -2,6 +2,7 @@
 import logging
 import random
 from collections import Counter, defaultdict
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Dict
 
@@ -335,16 +336,19 @@ class DialogAggregator:
         response_limit_minutes: float = 240.0,
         session_gap_minutes: float = 30.0,
         max_stored_sessions: int = 20_000,
+        max_reply_cache: int = 10_000,
     ):
         self.response_limit_minutes = response_limit_minutes
         self.session_gap_minutes = session_gap_minutes
         self.max_stored_sessions = max_stored_sessions
+        self.max_reply_cache = max_reply_cache
 
         self.prev_sender = None
         self.prev_date = None
         self.reply_edges = Counter()
         self.reply_time_hist = defaultdict(Counter)
         self.hourly_reply_hist = defaultdict(Counter)
+        self.message_lookup: OrderedDict[int, tuple[str, pd.Timestamp]] = OrderedDict()
 
         self._current_session = None
         self._stored_sessions = []
@@ -384,10 +388,20 @@ class DialogAggregator:
             return
 
         ordered = chunk.sort_values("date")
-        for _, row in ordered[["from", "date", "hour"]].iterrows():
+        cols = ["from", "date", "hour"]
+        has_message_id = "message_id" in ordered.columns
+        has_reply_to = "reply_to_message_id" in ordered.columns
+        if has_message_id:
+            cols.append("message_id")
+        if has_reply_to:
+            cols.append("reply_to_message_id")
+
+        for _, row in ordered[cols].iterrows():
             sender = str(row["from"])
             dt = pd.Timestamp(row["date"])
             hour = int(row["hour"])
+            message_id = row.get("message_id") if has_message_id else None
+            reply_to_message_id = row.get("reply_to_message_id") if has_reply_to else None
 
             if self.prev_date is None:
                 self._start_session(dt, sender)
@@ -410,14 +424,46 @@ class DialogAggregator:
                     self._current_session["end"] = dt
                     self._current_session["count"] += 1
 
-                if sender != self.prev_sender and 0 < gap_min <= self.response_limit_minutes:
-                    self.reply_edges[(sender, self.prev_sender)] += 1
-                    minute_bin = int(gap_min)
-                    self.reply_time_hist[(sender, self.prev_sender)][minute_bin] += 1
+                target_sender = None
+                effective_gap_min = gap_min
+
+                reply_to_id = None
+                if pd.notna(reply_to_message_id):
+                    try:
+                        reply_to_id = int(reply_to_message_id)
+                    except (TypeError, ValueError):
+                        reply_to_id = None
+
+                if reply_to_id is not None:
+                    target_info = self.message_lookup.get(reply_to_id)
+                    if target_info is not None:
+                        target_sender, target_dt = target_info
+                        effective_gap_min = (dt - target_dt).total_seconds() / 60.0
+
+                if target_sender is None:
+                    # Fallback для экспортов без reply_to_message_id.
+                    if sender != self.prev_sender and 0 < gap_min <= self.response_limit_minutes:
+                        target_sender = self.prev_sender
+                        effective_gap_min = gap_min
+
+                if target_sender is not None and sender != target_sender and effective_gap_min > 0:
+                    self.reply_edges[(sender, target_sender)] += 1
+                    minute_bin = int(effective_gap_min)
+                    self.reply_time_hist[(sender, target_sender)][minute_bin] += 1
                     self.hourly_reply_hist[(hour, sender)][minute_bin] += 1
 
             self.prev_sender = sender
             self.prev_date = dt
+
+            if pd.notna(message_id):
+                try:
+                    msg_id = int(message_id)
+                    self.message_lookup[msg_id] = (sender, dt)
+                    self.message_lookup.move_to_end(msg_id)
+                    if len(self.message_lookup) > self.max_reply_cache:
+                        self.message_lookup.popitem(last=False)
+                except (TypeError, ValueError):
+                    pass
 
     def result(self) -> Dict[str, pd.DataFrame]:
         self._close_current_session()
@@ -609,7 +655,7 @@ class AnomalyAggregator:
 
 class SocialAggregator:
     def __init__(self):
-        self.reaction_edges = Counter()
+        self.reactions_received = Counter()
         self.edited_by_user = Counter()
         self.deleted_by_user = Counter()
         self.total_by_user = Counter()
@@ -639,19 +685,17 @@ class SocialAggregator:
                 self.reply_edges[(sender, self.prev_sender)] += 1
 
             reactions = row["reactions"] if isinstance(row["reactions"], list) else []
-            if self.prev_sender is not None and reactions:
-                self.reaction_edges[(sender, self.prev_sender)] += len(reactions)
+            if reactions:
+                # В стандартном Telegram-экспорте неизвестно, кто поставил реакцию.
+                # Корректно считаем только реакции, полученные автором сообщения.
+                self.reactions_received[sender] += len(reactions)
 
             self.prev_sender = sender
             self.prev_date = dt
 
     def result(self) -> Dict[str, pd.DataFrame]:
-        reaction_rows = [(a, b, c) for (a, b), c in self.reaction_edges.items()]
-        reaction_df = (
-            pd.DataFrame(reaction_rows, columns=["from", "to", "count"])
-            if reaction_rows
-            else pd.DataFrame(columns=["from", "to", "count"])
-        )
+        reaction_rows = [{"from": user, "count": int(count)} for user, count in self.reactions_received.items()]
+        reaction_df = pd.DataFrame(reaction_rows).sort_values("count", ascending=False) if reaction_rows else pd.DataFrame(columns=["from", "count"])
         reply_rows = [(a, b, c) for (a, b), c in self.reply_edges.items()]
         reply_df = (
             pd.DataFrame(reply_rows, columns=["from", "to", "count"])
