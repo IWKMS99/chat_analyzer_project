@@ -31,8 +31,8 @@ def plot_user_message_counts(df: pd.DataFrame, top_n: int = 10, save_path: Optio
             logger.warning("Нет данных о количестве сообщений пользователей для графика.")
             return
 
-        print(f"\n--- Топ-{len(top_users)} пользователей по числу сообщений ---")
-        print(top_users)
+        logger.info(f"\n--- Топ-{len(top_users)} пользователей по числу сообщений ---")
+        logger.info(top_users)
 
         plt.figure(figsize=(10, max(5, top_n // 2)))  # Динамическая высота
         top_users.sort_values().plot(kind='barh', color='dodgerblue')  # Горизонтальный график
@@ -50,7 +50,7 @@ def plot_user_message_counts(df: pd.DataFrame, top_n: int = 10, save_path: Optio
                 logger.error(f"Не удалось сохранить график числа сообщений пользователей в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при построении графика числа сообщений пользователей: {e}", exc_info=True)
@@ -77,8 +77,8 @@ def plot_user_avg_message_length(df: pd.DataFrame, top_n: int = 10, save_path: O
             logger.warning("Не удалось рассчитать среднюю длину сообщений для графика.")
             return
 
-        print(f"\n--- Топ-{len(top_avg_len)} пользователей по средней длине сообщения (символы) ---")
-        print(top_avg_len.round(1))
+        logger.info(f"\n--- Топ-{len(top_avg_len)} пользователей по средней длине сообщения (символы) ---")
+        logger.info(top_avg_len.round(1))
 
         plt.figure(figsize=(10, max(5, top_n // 2)))  # Динамическая высота
         top_avg_len.sort_values().plot(kind='barh', color='mediumseagreen')  # Горизонтальный график
@@ -96,7 +96,7 @@ def plot_user_avg_message_length(df: pd.DataFrame, top_n: int = 10, save_path: O
                 logger.error(f"Не удалось сохранить график средней длины сообщений в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при построении графика средней длины сообщений: {e}", exc_info=True)
@@ -140,12 +140,12 @@ def analyze_message_chains(df: pd.DataFrame, save_path: Optional[str] = None, ma
         chain_stats.rename(columns={'count': 'number_of_chains', 'mean': 'avg_chain_len', 'median': 'median_chain_len',
                                     'max': 'max_chain_len'}, inplace=True)
 
-        print("\n--- Статистика цепочек сообщений ---")
-        print("(Количество сообщений подряд от одного автора)")
+        logger.info("\n--- Статистика цепочек сообщений ---")
+        logger.info("(Количество сообщений подряд от одного автора)")
         try:
-            print(chain_stats.round(2).to_string())
+            logger.info(chain_stats.round(2).to_string())
         except Exception:
-            print(chain_stats.round(2))
+            logger.info(chain_stats.round(2))
 
         # Ограничение числа участников для отображения на гистограмме
         num_users = chain_lengths['from'].nunique()
@@ -170,7 +170,7 @@ def analyze_message_chains(df: pd.DataFrame, save_path: Optional[str] = None, ma
         if not plot_has_data:
             logger.warning("Нет данных для отображения на гистограмме длин цепочек после фильтрации.")
             plt.close()
-            print("-" * 20)
+            logger.info("-" * 20)
             return
 
         plt.title('Распределение длины цепочек сообщений (Плотность)', fontsize=16)
@@ -207,7 +207,7 @@ def analyze_message_chains(df: pd.DataFrame, save_path: Optional[str] = None, ma
                 logger.error(f"Не удалось сохранить график длин цепочек в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе цепочек сообщений: {e}", exc_info=True)
@@ -244,8 +244,8 @@ def analyze_most_active_days(df: pd.DataFrame, top_n: int = 5, save_path: Option
             logger.warning("Не удалось определить самые активные дни.")
             return
 
-        print(f"\n--- Топ-{len(top_days_totals)} самых активных дней ---")
-        print(top_days_totals)
+        logger.info(f"\n--- Топ-{len(top_days_totals)} самых активных дней ---")
+        logger.info(top_days_totals)
 
         # Подготовка данных для графика (только для топ-N дней)
         top_days_df = daily_counts_by_user.loc[top_days_totals.index]
@@ -301,7 +301,7 @@ def analyze_most_active_days(df: pd.DataFrame, top_n: int = 5, save_path: Option
                 logger.error(f"Не удалось сохранить график активных дней в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе самых активных дней: {e}", exc_info=True)

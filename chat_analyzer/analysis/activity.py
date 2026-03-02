@@ -76,7 +76,7 @@ def plot_hourly_activity(
 
         sns.lineplot(data=hourly_counts_plot, linewidth=2.5, palette='viridis', dashes=False)
         plt.title(title, fontsize=16)
-        plt.xlabel('Час дня (UTC)', fontsize=12)
+        plt.xlabel('Час дня (локальное время)', fontsize=12)
         plt.ylabel(y_label, fontsize=12)
 
         # Размещаем легенду снаружи, если много элементов
@@ -206,12 +206,12 @@ def plot_weekday_activity(
         # Вывод статистики (пример)
         weekday_summary = df_plot.groupby(['day_of_week', 'from']).size().unstack(fill_value=0).reindex(days_order,
                                                                                                         fill_value=0)
-        print("\n--- Активность по дням недели (Топ пользователей) ---")
+        logger.info("\n--- Активность по дням недели (Топ пользователей) ---")
         try:
-            print(weekday_summary.to_string())
+            logger.info(weekday_summary.to_string())
         except Exception:  # Если to_string слишком большой
-            print(weekday_summary)
-        print("-" * 20)
+            logger.info(weekday_summary)
+        logger.info("-" * 20)
 
 
     except Exception as e:
@@ -237,8 +237,7 @@ def plot_monthly_activity(df: pd.DataFrame, save_path: Optional[str] = None, max
         plt.figure(figsize=(14, 7))
 
         # Извлечение года и месяца
-        df_copy = df.copy()  # Работаем с копией
-        df_copy['year_month'] = df_copy['date'].dt.to_period('M')
+        df_copy = df.assign(year_month=df['date'].dt.to_period('M'))
 
         # Подсчет сообщений по месяцам и участникам
         monthly_counts = df_copy.groupby(['year_month', 'from']).size().unstack(fill_value=0)
@@ -291,12 +290,12 @@ def plot_monthly_activity(df: pd.DataFrame, save_path: Optional[str] = None, max
         plt.close()
 
         # Вывод статистики
-        print("\n--- Статистика сообщений по месяцам (Топ пользователей) ---")
+        logger.info("\n--- Статистика сообщений по месяцам (Топ пользователей) ---")
         try:
-            print(monthly_counts_plot.to_string())
+            logger.info(monthly_counts_plot.to_string())
         except Exception:
-            print(monthly_counts_plot)
-        print("-" * 20)
+            logger.info(monthly_counts_plot)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при построении графика активности по месяцам: {e}", exc_info=True)
@@ -315,7 +314,7 @@ def analyze_time_periods(df: pd.DataFrame, save_path: Optional[str] = None, max_
         return
 
     try:
-        df_copy = df.copy()
+        df_copy = df.assign()
         # Определение временных интервалов
         bins = [-1, 6, 12, 18, 24]  # Используем -1 для включения 0
         labels = ['Ночь (0-6)', 'Утро (6-12)', 'День (12-18)', 'Вечер (18-24)']
@@ -368,12 +367,12 @@ def analyze_time_periods(df: pd.DataFrame, save_path: Optional[str] = None, max_
         plt.close()
 
         # Вывод статистики
-        print("\n--- Статистика активности по временным интервалам (Топ пользователей) ---")
+        logger.info("\n--- Статистика активности по временным интервалам (Топ пользователей) ---")
         try:
-            print(period_counts_plot.to_string())
+            logger.info(period_counts_plot.to_string())
         except Exception:
-            print(period_counts_plot)
-        print("-" * 20)
+            logger.info(period_counts_plot)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе временных периодов: {e}", exc_info=True)

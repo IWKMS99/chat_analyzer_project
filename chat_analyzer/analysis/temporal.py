@@ -76,13 +76,13 @@ def calculate_response_time(df: pd.DataFrame, max_interval_minutes: float = 60) 
         else:
             avg_response = valid_response_times.mean()
 
-        print("\n--- Среднее время ответа ---")
-        print(f"(Учитываются ответы разных авторов в течение {max_interval_minutes} мин)")
-        print(f"Среднее время ответа: {avg_response:.2f} минут")
-        print(
+        logger.info("\n--- Среднее время ответа ---")
+        logger.info(f"(Учитываются ответы разных авторов в течение {max_interval_minutes} мин)")
+        logger.info(f"Среднее время ответа: {avg_response:.2f} минут")
+        logger.info(
             f"Медианное время ответа: {valid_response_times.median():.2f} минут" if not valid_response_times.empty else "Медианное время ответа: N/A")
-        print(f"Количество учтенных ответов: {len(valid_response_times)}")
-        print("-" * 20)
+        logger.info(f"Количество учтенных ответов: {len(valid_response_times)}")
+        logger.info("-" * 20)
         return avg_response
 
     except Exception as e:
@@ -136,13 +136,13 @@ def plot_response_time_distribution(df: pd.DataFrame, max_interval_minutes: floa
             logger.warning(f"Не найдено валидных времен ответа (0 < t <= {max_interval_minutes} мин) для гистограммы.")
             return
 
-        print("\n--- Распределение времени ответа ---")
-        print(f"(Ответы разных авторов, 0 < t <= {max_interval_minutes} мин)")
-        print(f"Median:    {valid_response_times.median():.2f} min")
-        print(f"Mean:      {valid_response_times.mean():.2f} min")
-        print(f"90-й перц.: {valid_response_times.quantile(0.9):.2f} min")
-        print(f"95-й перц.: {valid_response_times.quantile(0.95):.2f} min")
-        print(f"Количество: {len(valid_response_times)}")
+        logger.info("\n--- Распределение времени ответа ---")
+        logger.info(f"(Ответы разных авторов, 0 < t <= {max_interval_minutes} мин)")
+        logger.info(f"Median:    {valid_response_times.median():.2f} min")
+        logger.info(f"Mean:      {valid_response_times.mean():.2f} min")
+        logger.info(f"90-й перц.: {valid_response_times.quantile(0.9):.2f} min")
+        logger.info(f"95-й перц.: {valid_response_times.quantile(0.95):.2f} min")
+        logger.info(f"Количество: {len(valid_response_times)}")
 
         # Гистограмма
         plt.figure(figsize=(10, 6))
@@ -162,7 +162,7 @@ def plot_response_time_distribution(df: pd.DataFrame, max_interval_minutes: floa
                 logger.error(f"Не удалось сохранить гистограмму времени ответа в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при построении гистограммы времени ответа: {e}", exc_info=True)
@@ -209,13 +209,13 @@ def plot_daily_activity_with_moving_averages(df: pd.DataFrame, save_path: Option
         rolling_7 = daily_counts.rolling(window=7, min_periods=1, center=True).mean().rename("ma_7d")
         rolling_30 = daily_counts.rolling(window=30, min_periods=1, center=True).mean().rename("ma_30d")
 
-        print("\n--- Активность по дням ---")
-        print(f"Период: {daily_counts.index.min().date()} - {daily_counts.index.max().date()}")
-        print(f"Всего дней в периоде: {len(daily_counts)}")
-        print(f"Дней с сообщениями: {(daily_counts > 0).sum()}")
-        print(f"Среднее сообщений в день (за весь период): {daily_counts.mean():.2f}")
-        print(f"Медианное сообщений в день: {daily_counts.median():.1f}")
-        print(f"Максимум сообщений в день: {daily_counts.max()}")
+        logger.info("\n--- Активность по дням ---")
+        logger.info(f"Период: {daily_counts.index.min().date()} - {daily_counts.index.max().date()}")
+        logger.info(f"Всего дней в периоде: {len(daily_counts)}")
+        logger.info(f"Дней с сообщениями: {(daily_counts > 0).sum()}")
+        logger.info(f"Среднее сообщений в день (за весь период): {daily_counts.mean():.2f}")
+        logger.info(f"Медианное сообщений в день: {daily_counts.median():.1f}")
+        logger.info(f"Максимум сообщений в день: {daily_counts.max()}")
 
         # Визуализация (matplotlib)
         plt.figure(figsize=(14, 6))
@@ -238,7 +238,7 @@ def plot_daily_activity_with_moving_averages(df: pd.DataFrame, save_path: Option
                 logger.error(f"Не удалось сохранить график дневной активности в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
         return daily_counts  # Возвращаем daily_counts для возможного использования в seasonal_decompose
 
     except Exception as e:
@@ -261,7 +261,7 @@ def perform_seasonal_decomposition(daily_counts: pd.Series, period: int = 7, mod
         return
 
     try:
-        print(f"\n--- Сезонная декомпозиция (Период={period}, Модель={model}) ---")
+        logger.info(f"\n--- Сезонная декомпозиция (Период={period}, Модель={model}) ---")
         # Используем seasonal_decompose
         # Убедимся, что индекс имеет частоту 'D' (ежедневную)
         if daily_counts.index.freq is None:
@@ -285,7 +285,7 @@ def perform_seasonal_decomposition(daily_counts: pd.Series, period: int = 7, mod
                 logger.error(f"Не удалось сохранить график сезонной декомпозиции в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except ValueError as ve:
         # Часто возникает, если в данных много нулей или ряд слишком короткий
@@ -327,17 +327,17 @@ def analyze_message_intervals(df: pd.DataFrame, max_interval_seconds: float = 36
 
         if valid_intervals.empty:
             logger.warning(f"Не найдено интервалов между сообщениями в диапазоне (0, {max_interval_seconds}] секунд.")
-            print("\n--- Статистика интервалов между сообщениями ---")
-            print(f"Не найдено интервалов в диапазоне (0, {max_interval_seconds:.0f}] секунд.")
-            print("-" * 20)
+            logger.info("\n--- Статистика интервалов между сообщениями ---")
+            logger.info(f"Не найдено интервалов в диапазоне (0, {max_interval_seconds:.0f}] секунд.")
+            logger.info("-" * 20)
             return
 
-        print("\n--- Статистика интервалов между сообщениями ---")
-        print(f"(Интервалы > 0 и <= {max_interval_seconds:.0f} секунд)")
+        logger.info("\n--- Статистика интервалов между сообщениями ---")
+        logger.info(f"(Интервалы > 0 и <= {max_interval_seconds:.0f} секунд)")
         try:
-            print(valid_intervals.describe().to_string())
+            logger.info(valid_intervals.describe().to_string())
         except Exception:
-            print(valid_intervals.describe())
+            logger.info(valid_intervals.describe())
 
         plt.figure(figsize=(12, 6))
         sns.histplot(valid_intervals, bins=50, kde=True, color='purple')
@@ -362,7 +362,7 @@ def analyze_message_intervals(df: pd.DataFrame, max_interval_seconds: float = 36
                 logger.error(f"Не удалось сохранить график интервалов в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе интервалов между сообщениями: {e}", exc_info=True)

@@ -25,12 +25,12 @@ def analyze_message_length(df: pd.DataFrame, save_path: Optional[str] = None, ma
         return
 
     try:
-        print("\n--- Статистика длины сообщений (символы) ---")
+        logger.info("\n--- Статистика длины сообщений (символы) ---")
         stats = df.groupby('from')['text_length'].describe()
         try:
-            print(stats.to_string())
+            logger.info(stats.to_string())
         except Exception:
-            print(stats)
+            logger.info(stats)
 
         # Ограничение числа участников для отображения
         num_users = df['from'].nunique()
@@ -78,7 +78,7 @@ def analyze_message_length(df: pd.DataFrame, save_path: Optional[str] = None, ma
                 logger.error(f"Не удалось сохранить график длины сообщений в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе длины сообщений: {e}", exc_info=True)
@@ -97,7 +97,7 @@ def analyze_question_messages(df: pd.DataFrame, save_path: Optional[str] = None,
         return
 
     try:
-        df_copy = df.copy()
+        df_copy = df.assign()
         # Определение вопросительных сообщений (простой поиск знака вопроса)
         # Убедимся, что text - это строка
         df_copy['is_question'] = df_copy['text'].astype(str).str.contains(r'\?', na=False, regex=True)
@@ -122,20 +122,20 @@ def analyze_question_messages(df: pd.DataFrame, save_path: Optional[str] = None,
             all_hours = pd.Index(range(24), name='hour')
             hourly_questions = hourly_questions.reindex(all_hours, fill_value=0)
 
-        print("\n--- Статистика вопросительных сообщений ('?') ---")
+        logger.info("\n--- Статистика вопросительных сообщений ('?') ---")
         if question_counts.empty:
-            print("Не найдено сообщений, содержащих '?'.")
+            logger.info("Не найдено сообщений, содержащих '?'.")
         else:
-            print("\nКоличество вопросов:")
-            print(question_counts)
-            print("\nДоля вопросов от всех сообщений участника:")
+            logger.info("\nКоличество вопросов:")
+            logger.info(question_counts)
+            logger.info("\nДоля вопросов от всех сообщений участника:")
             # Форматируем вывод доли в процентах
-            print(question_ratio.map('{:.2%}'.format))
-            print("\nРаспределение вопросов по часам (UTC):")
+            logger.info(question_ratio.map('{:.2%}'.format))
+            logger.info("\nРаспределение вопросов по часам (локальное время):")
             try:
-                print(hourly_questions.to_string())
+                logger.info(hourly_questions.to_string())
             except Exception:
-                print(hourly_questions)
+                logger.info(hourly_questions)
 
             # Ограничение числа участников для отображения
             num_users = hourly_questions.shape[1]
@@ -153,7 +153,7 @@ def analyze_question_messages(df: pd.DataFrame, save_path: Optional[str] = None,
                 # Построение графика
                 plt.figure(figsize=(14, 7))
                 hourly_questions_plot.plot(figsize=(14, 7), ax=plt.gca(), colormap='coolwarm', marker='.')
-                plt.title('Количество вопросительных сообщений по часам (UTC)', fontsize=16)
+                plt.title('Количество вопросительных сообщений по часам (локальное время)', fontsize=16)
                 plt.xlabel('Час дня', fontsize=12)
                 plt.ylabel('Количество вопросов', fontsize=12)
 
@@ -176,7 +176,7 @@ def analyze_question_messages(df: pd.DataFrame, save_path: Optional[str] = None,
                         logger.error(f"Не удалось сохранить график вопросительных сообщений в {save_path}: {e}")
                 # plt.show()
                 plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе вопросительных сообщений: {e}", exc_info=True)
@@ -196,7 +196,7 @@ def analyze_short_long_messages(df: pd.DataFrame, length_threshold: int = 50, sa
         return
 
     try:
-        df_copy = df.copy()
+        df_copy = df.assign()
         # Классификация сообщений
         df_copy['message_type'] = df_copy['text_length'].apply(lambda
                                                                    x: f'Короткое (<= {length_threshold})' if x <= length_threshold else f'Длинное (> {length_threshold})')
@@ -211,12 +211,12 @@ def analyze_short_long_messages(df: pd.DataFrame, length_threshold: int = 50, sa
         all_hours = pd.Index(range(24), name='hour')
         hourly_counts = hourly_counts.reindex(all_hours, fill_value=0)
 
-        print("\n--- Статистика коротких и длинных сообщений ---")
-        print(f"Порог длины: {length_threshold} символов")
+        logger.info("\n--- Статистика коротких и длинных сообщений ---")
+        logger.info(f"Порог длины: {length_threshold} символов")
         try:
-            print(message_type_counts.to_string())
+            logger.info(message_type_counts.to_string())
         except Exception:
-            print(message_type_counts)
+            logger.info(message_type_counts)
 
         # Ограничение числа участников для отображения
         num_users = df['from'].nunique()
@@ -255,7 +255,7 @@ def analyze_short_long_messages(df: pd.DataFrame, length_threshold: int = 50, sa
                 logger.warning("Нет данных для отображения на графике коротких/длинных сообщений после фильтрации.")
                 plt.close()
             else:
-                plt.title(f'Активность коротких (<= {length_threshold}) и длинных сообщений по часам (UTC)',
+                plt.title(f'Активность коротких (<= {length_threshold}) и длинных сообщений по часам (локальное время)',
                           fontsize=16)
                 plt.xlabel('Час дня', fontsize=12)
                 plt.ylabel('Количество сообщений', fontsize=12)
@@ -280,7 +280,7 @@ def analyze_short_long_messages(df: pd.DataFrame, length_threshold: int = 50, sa
                         logger.error(f"Не удалось сохранить график коротких/длинных сообщений в {save_path}: {e}")
                 # plt.show()
                 plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе коротких/длинных сообщений: {e}", exc_info=True)

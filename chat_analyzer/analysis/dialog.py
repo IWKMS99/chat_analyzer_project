@@ -9,6 +9,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from chat_analyzer.utils import finalize_plot, log_exception, normalize_time_window
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,25 +59,25 @@ def analyze_dialog_sessions(df: pd.DataFrame, max_gap_minutes: float = 30, save_
         # Статистика по участникам в сессиях
         session_participants_stats = df_sessions.groupby(['session_id', 'from']).size().unstack(fill_value=0)
 
-        print("\n--- Статистика сессий общения ---")
+        logger.info("\n--- Статистика сессий общения ---")
         if sessions.empty:
-            print("Сессий общения не найдено.")
+            logger.info("Сессий общения не найдено.")
         else:
-            print(f"Общее количество сессий (разрыв > {max_gap_minutes} мин): {len(sessions)}")
-            print(f"Средняя длительность сессии (минуты): {sessions['duration_minutes'].mean():.2f}")
-            print(f"Медианная длительность сессии (минуты): {sessions['duration_minutes'].median():.2f}")
-            print(f"Максимальная длительность сессии (минуты): {sessions['duration_minutes'].max():.2f}")
-            print(f"Среднее количество сообщений в сессии: {sessions['message_count'].mean():.2f}")
-            print(f"Медианное количество сообщений в сессии: {sessions['message_count'].median():.2f}")
-            print(f"Максимальное количество сообщений в сессии: {sessions['message_count'].max():.0f}")
-            print(f"Среднее количество участников в сессии: {sessions['participants'].mean():.2f}")
+            logger.info(f"Общее количество сессий (разрыв > {max_gap_minutes} мин): {len(sessions)}")
+            logger.info(f"Средняя длительность сессии (минуты): {sessions['duration_minutes'].mean():.2f}")
+            logger.info(f"Медианная длительность сессии (минуты): {sessions['duration_minutes'].median():.2f}")
+            logger.info(f"Максимальная длительность сессии (минуты): {sessions['duration_minutes'].max():.2f}")
+            logger.info(f"Среднее количество сообщений в сессии: {sessions['message_count'].mean():.2f}")
+            logger.info(f"Медианное количество сообщений в сессии: {sessions['message_count'].median():.2f}")
+            logger.info(f"Максимальное количество сообщений в сессии: {sessions['message_count'].max():.0f}")
+            logger.info(f"Среднее количество участников в сессии: {sessions['participants'].mean():.2f}")
 
-            print("\nРаспределение сообщений по участникам в сессиях (описание):")
+            logger.info("\nРаспределение сообщений по участникам в сессиях (описание):")
             # Описываем только сессии с >0 сообщениями для каждого участника
             try:
-                print(session_participants_stats[session_participants_stats > 0].describe().to_string())
+                logger.info(session_participants_stats[session_participants_stats > 0].describe().to_string())
             except Exception:
-                print(session_participants_stats[session_participants_stats > 0].describe())
+                logger.info(session_participants_stats[session_participants_stats > 0].describe())
 
             # График: длительность vs количество сообщений
             plt.figure(figsize=(14, 7))
@@ -103,7 +105,7 @@ def analyze_dialog_sessions(df: pd.DataFrame, max_gap_minutes: float = 30, save_
                     logger.error(f"Не удалось сохранить график сессий общения в {save_path}: {e}")
             # plt.show()
             plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе сессий общения: {e}", exc_info=True)
@@ -153,17 +155,17 @@ def analyze_dialog_balance(df: pd.DataFrame, max_gap_minutes: float = 30, save_p
             total_messages_in_active_sessions = active_sessions.sum(axis=1)
             balance_ratios = active_sessions.div(total_messages_in_active_sessions, axis=0)
 
-        print("\n--- Статистика баланса диалога ---")
+        logger.info("\n--- Статистика баланса диалога ---")
         if balance_ratios.empty:
-            print(f"Не найдено сессий для анализа баланса между топ-{n_participants_to_consider} участниками.")
+            logger.info(f"Не найдено сессий для анализа баланса между топ-{n_participants_to_consider} участниками.")
         else:
-            print(f"Анализ баланса для топ-{n_participants_to_consider} участников ({', '.join(top_participants)}).")
-            print(f"Количество сессий с участием всех этих участников: {len(balance_ratios)}")
-            print("\nСтатистика доли сообщений в таких сессиях:")
+            logger.info(f"Анализ баланса для топ-{n_participants_to_consider} участников ({', '.join(top_participants)}).")
+            logger.info(f"Количество сессий с участием всех этих участников: {len(balance_ratios)}")
+            logger.info("\nСтатистика доли сообщений в таких сессиях:")
             try:
-                print(balance_ratios.describe().to_string())
+                logger.info(balance_ratios.describe().to_string())
             except Exception:
-                print(balance_ratios.describe())
+                logger.info(balance_ratios.describe())
 
             # Построение гистограммы
             plt.figure(figsize=(14, 7))
@@ -190,14 +192,14 @@ def analyze_dialog_balance(df: pd.DataFrame, max_gap_minutes: float = 30, save_p
                     logger.error(f"Не удалось сохранить график баланса диалога в {save_path}: {e}")
             # plt.show()
             plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе баланса диалога: {e}", exc_info=True)
         plt.close()
 
 
-def analyze_dialog_intensity(df: pd.DataFrame, time_window: str = '1H', save_path: Optional[str] = None,
+def analyze_dialog_intensity(df: pd.DataFrame, time_window: str = '1h', save_path: Optional[str] = None,
                              max_legend_items: int = 10) -> None:
     """Анализирует интенсивность диалога (сообщения в минуту) по временным окнам."""
     if df is None or df.empty:
@@ -213,6 +215,12 @@ def analyze_dialog_intensity(df: pd.DataFrame, time_window: str = '1H', save_pat
         return
 
     try:
+        normalized_window, error = normalize_time_window(time_window)
+        if error:
+            logger.error("Некорректное временное окно: %s", error)
+            return
+        logger.info("Временное окно интенсивности нормализовано: %s -> %s", time_window, normalized_window)
+
         df_sorted = df.sort_values('date').copy()
 
         # Подсчет сообщений в заданном временном окне
@@ -220,34 +228,34 @@ def analyze_dialog_intensity(df: pd.DataFrame, time_window: str = '1H', save_pat
         df_sorted.set_index('date', inplace=True)
 
         # Используем resample для группировки по времени
-        intensity = df_sorted.groupby('from').resample(time_window).size().unstack(level=0, fill_value=0)
+        intensity = df_sorted.groupby('from').resample(normalized_window).size().unstack(level=0, fill_value=0)
 
         if intensity.empty:
-            logger.warning(f"Нет данных для анализа интенсивности после группировки по {time_window}.")
+            logger.warning(f"Нет данных для анализа интенсивности после группировки по {normalized_window}.")
             return
 
         # Перевод в сообщения в минуту
         try:
-            minutes_in_window = pd.Timedelta(time_window).total_seconds() / 60
+            minutes_in_window = pd.Timedelta(normalized_window).total_seconds() / 60
             if minutes_in_window <= 0:
-                logger.error(f"Некорректное временное окно: {time_window}. Невозможно рассчитать интенсивность.")
+                logger.error(f"Некорректное временное окно: {normalized_window}. Невозможно рассчитать интенсивность.")
                 return
             intensity_per_minute = intensity / minutes_in_window
         except ValueError:
             logger.error(
-                f"Не удалось распознать временное окно: {time_window}. Используется необработанное количество.")
+                f"Не удалось распознать временное окно: {normalized_window}. Используется необработанное количество.")
             intensity_per_minute = intensity  # Отображаем просто количество
-            y_label = f'Сообщений в {time_window}'
+            y_label = f'Сообщений в {normalized_window}'
         else:
             y_label = 'Сообщений в минуту'
 
-        print("\n--- Статистика интенсивности диалогов ---")
-        print(f"Временное окно: {time_window}")
-        print(f"({y_label})")
+        logger.info("\n--- Статистика интенсивности диалогов ---")
+        logger.info(f"Временное окно: {normalized_window}")
+        logger.info(f"({y_label})")
         try:
-            print(intensity_per_minute.describe().to_string())
+            logger.info(intensity_per_minute.describe().to_string())
         except Exception:
-            print(intensity_per_minute.describe())
+            logger.info(intensity_per_minute.describe())
 
         # Ограничение числа участников для отображения
         num_users = len(intensity_per_minute.columns)
@@ -279,18 +287,11 @@ def analyze_dialog_intensity(df: pd.DataFrame, time_window: str = '1H', save_pat
         plt.tight_layout(rect=[0, 0, 0.85 if len(intensity_plot.columns) > 5 else 1, 1])
 
         # Сохранение графика
-        if save_path:
-            try:
-                plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                logger.info(f"График интенсивности диалога сохранен в {save_path}")
-            except Exception as e:
-                logger.error(f"Не удалось сохранить график интенсивности диалога в {save_path}: {e}")
-        # plt.show()
-        plt.close()
-        print("-" * 20)
+        finalize_plot(logger, save_path, "график интенсивности диалога")
+        logger.info("-" * 20)
 
     except Exception as e:
-        logger.error(f"Ошибка при анализе интенсивности диалога: {e}", exc_info=True)
+        log_exception(logger, "Ошибка при анализе интенсивности диалога", e)
         plt.close()
 
 
@@ -329,15 +330,15 @@ def analyze_dialog_initiators(df: pd.DataFrame, max_gap_minutes: float = 30, sav
         all_hours = pd.Index(range(24), name='hour')
         hourly_initiators = hourly_initiators.reindex(all_hours, fill_value=0)
 
-        print("\n--- Статистика инициаторов диалогов ---")
-        print(f"Проанализировано {len(first_messages)} сессий (разрыв > {max_gap_minutes} мин).")
-        print("\nКоличество инициированных диалогов по участникам:")
-        print(initiator_counts)
-        print("\nРаспределение инициаций по часам:")
+        logger.info("\n--- Статистика инициаторов диалогов ---")
+        logger.info(f"Проанализировано {len(first_messages)} сессий (разрыв > {max_gap_minutes} мин).")
+        logger.info("\nКоличество инициированных диалогов по участникам:")
+        logger.info(initiator_counts)
+        logger.info("\nРаспределение инициаций по часам:")
         try:
-            print(hourly_initiators.to_string())
+            logger.info(hourly_initiators.to_string())
         except Exception:
-            print(hourly_initiators)
+            logger.info(hourly_initiators)
 
         # Построение графиков
         fig, axes = plt.subplots(2, 1, figsize=(12, 10),
@@ -362,14 +363,14 @@ def analyze_dialog_initiators(df: pd.DataFrame, max_gap_minutes: float = 30, sav
             max_val = hourly_initiators.values.max()
             sns.heatmap(hourly_initiators, ax=axes[1], cmap='viridis', annot=True, fmt='.0f', linewidths=.5,
                         cbar=max_val > 0)  # Показываем cbar если есть ненулевые значения
-            axes[1].set_title('Инициации диалогов по часам (UTC)', fontsize=14)
+            axes[1].set_title('Инициации диалогов по часам (локальное время)', fontsize=14)
             axes[1].set_xlabel('Участник', fontsize=12)
             axes[1].set_ylabel('Час дня', fontsize=12)
             axes[1].tick_params(axis='y', rotation=0)
         else:
             axes[1].text(0.5, 0.5, 'Нет данных для тепловой карты инициаций', horizontalalignment='center',
                          verticalalignment='center', transform=axes[1].transAxes)
-            axes[1].set_title('Инициации диалогов по часам (UTC)', fontsize=14)
+            axes[1].set_title('Инициации диалогов по часам (локальное время)', fontsize=14)
 
         plt.tight_layout(rect=[0, 0, 1, 0.98])  # Оставляем место для suptitle
 
@@ -382,8 +383,147 @@ def analyze_dialog_initiators(df: pd.DataFrame, max_gap_minutes: float = 30, sav
                 logger.error(f"Не удалось сохранить график инициаторов диалогов в {save_path}: {e}")
         # plt.show()
         plt.close()
-        print("-" * 20)
+        logger.info("-" * 20)
 
     except Exception as e:
         logger.error(f"Ошибка при анализе инициаторов диалогов: {e}", exc_info=True)
         plt.close()
+
+
+def _build_reply_edges(df: pd.DataFrame, max_interval_minutes: float = 240) -> pd.DataFrame:
+    """Строит таблицу ответов current<-previous между участниками."""
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    required_columns = ["date", "from"]
+    if not all(col in df for col in required_columns):
+        return pd.DataFrame()
+
+    df_sorted = df.sort_values("date").copy()
+    df_sorted["prev_from"] = df_sorted["from"].shift(1)
+    df_sorted["prev_date"] = df_sorted["date"].shift(1)
+    df_sorted["gap_min"] = (df_sorted["date"] - df_sorted["prev_date"]).dt.total_seconds() / 60
+
+    replies = df_sorted[
+        df_sorted["prev_from"].notna()
+        & (df_sorted["from"] != df_sorted["prev_from"])
+        & (df_sorted["gap_min"] > 0)
+        & (df_sorted["gap_min"] <= max_interval_minutes)
+    ][["prev_from", "from", "gap_min", "hour"]]
+    return replies
+
+
+def plot_reply_matrix(
+        df: pd.DataFrame,
+        save_path: Optional[str] = None,
+        max_legend_items: int = 10,
+        max_interval_minutes: float = 240,
+) -> pd.DataFrame:
+    """Матрица ответов: кто кому отвечает."""
+    replies = _build_reply_edges(df, max_interval_minutes=max_interval_minutes)
+    if replies.empty:
+        logger.warning("Недостаточно данных для матрицы ответов.")
+        return pd.DataFrame()
+
+    counts = replies.groupby(["from", "prev_from"]).size().unstack(fill_value=0)
+
+    # Ограничиваем отображение топ-пользователями, чтобы тепловая карта оставалась читаемой.
+    participants = (
+        df["from"].value_counts().head(max_legend_items).index
+        if df["from"].nunique() > max_legend_items else df["from"].value_counts().index
+    )
+    counts = counts.reindex(index=participants, columns=participants, fill_value=0)
+
+    if counts.empty:
+        logger.warning("Матрица ответов пуста после фильтрации.")
+        return counts
+
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(counts, cmap="YlGnBu", annot=True, fmt=".0f", linewidths=0.5)
+    plt.title("Матрица ответов: строки отвечают столбцам")
+    plt.xlabel("Кому отвечают")
+    plt.ylabel("Кто отвечает")
+    plt.tight_layout()
+    finalize_plot(logger, save_path, "матрица ответов")
+    return counts
+
+
+def plot_response_time_heatmaps(
+        df: pd.DataFrame,
+        save_path: Optional[str] = None,
+        max_legend_items: int = 10,
+        max_interval_minutes: float = 240,
+) -> dict:
+    """Тепловые карты медианного времени ответа по парам и по часам."""
+    replies = _build_reply_edges(df, max_interval_minutes=max_interval_minutes)
+    if replies.empty:
+        logger.warning("Недостаточно данных для тепловой карты времени ответа.")
+        return {"pair_median": pd.DataFrame(), "hourly_pair_median": pd.DataFrame()}
+
+    top_users = df["from"].value_counts().head(max_legend_items).index
+    replies = replies[replies["from"].isin(top_users) & replies["prev_from"].isin(top_users)]
+    if replies.empty:
+        logger.warning("После фильтрации топ-пользователей нет данных для тепловой карты времени ответа.")
+        return {"pair_median": pd.DataFrame(), "hourly_pair_median": pd.DataFrame()}
+
+    pair_median = replies.groupby(["from", "prev_from"])["gap_min"].median().unstack(fill_value=0.0)
+    hourly_pair_median = replies.groupby(["hour", "from"])["gap_min"].median().unstack(fill_value=0.0).reindex(
+        range(24), fill_value=0.0
+    )
+
+    fig, axes = plt.subplots(2, 1, figsize=(14, 12))
+    sns.heatmap(pair_median, cmap="rocket_r", annot=True, fmt=".1f", linewidths=0.5, ax=axes[0])
+    axes[0].set_title("Медианное время ответа по парам участников (мин)")
+    axes[0].set_xlabel("Кому отвечают")
+    axes[0].set_ylabel("Кто отвечает")
+
+    sns.heatmap(hourly_pair_median, cmap="mako", linewidths=0.3, ax=axes[1], cbar=True)
+    axes[1].set_title("Медианное время ответа по часам и отвечающему участнику (мин)")
+    axes[1].set_xlabel("Кто отвечает")
+    axes[1].set_ylabel("Час")
+
+    plt.tight_layout()
+    finalize_plot(logger, save_path, "тепловая карта времени ответа")
+    return {"pair_median": pair_median, "hourly_pair_median": hourly_pair_median}
+
+
+def plot_session_timeline(
+        df: pd.DataFrame,
+        max_gap_minutes: float = 30,
+        save_path: Optional[str] = None,
+        max_sessions: int = 60,
+) -> pd.DataFrame:
+    """Таймлайн сессий: старт/длительность/насыщенность/инициатор."""
+    sessions_df = _define_sessions(df, max_gap_minutes=max_gap_minutes)
+    if sessions_df.empty:
+        logger.warning("Нет данных для таймлайна сессий.")
+        return pd.DataFrame()
+
+    summary = sessions_df.groupby("session_id").agg(
+        start_time=("date", "min"),
+        end_time=("date", "max"),
+        initiator=("from", "first"),
+        message_count=("from", "size"),
+    )
+    summary["duration_min"] = (summary["end_time"] - summary["start_time"]).dt.total_seconds() / 60
+    summary = summary.sort_values("start_time")
+    if len(summary) > max_sessions:
+        summary = summary.tail(max_sessions)
+
+    plt.figure(figsize=(14, 7))
+    scatter = plt.scatter(
+        summary["start_time"],
+        summary["duration_min"],
+        s=summary["message_count"] * 12,
+        c=summary["message_count"],
+        cmap="viridis",
+        alpha=0.8,
+    )
+    plt.colorbar(scatter, label="Количество сообщений")
+    plt.title(f"Таймлайн сессий (gap>{max_gap_minutes} мин): длительность и плотность")
+    plt.xlabel("Начало сессии")
+    plt.ylabel("Длительность (мин)")
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    finalize_plot(logger, save_path, "таймлайн сессий")
+    return summary
