@@ -1,107 +1,51 @@
 # Chat Analyzer Project
 
-Анализатор JSON экспорта чатов Telegram. Генерирует статистику и визуализации различных аспектов общения.
+Stream-first анализатор Telegram JSON экспортов.
 
-## Структура проекта
-
-```
-chat_analyzer_project/
-├── chat_analyzer/      # Исходный код пакета
-│   ├── __init__.py
-│   ├── data_loader.py  # Загрузка и предобработка данных
-│   ├── analysis/       # Модули с функциями анализа
-│   │   ├── __init__.py
-│   │   ├── activity.py
-│   │   ├── anomaly.py
-│   │   ├── dialog.py
-│   │   ├── message.py
-│   │   ├── nlp.py
-│   │   ├── summary.py
-│   │   ├── temporal.py
-│   │   └── user.py
-│   └── utils.py        # Вспомогательные функции (логирование, директории)
-├── main.py             # Главный скрипт для запуска анализа
-├── requirements.txt    # Зависимости проекта
-└── README.md           # Этот файл
-├── data/               # (Опционально) Директория для входных данных
-│   └── result.json
-├── output/             # (Опционально) Директория для результатов (графики, логи)
-└── .gitignore          # (Опционально) Файл для Git
-```
+## Что изменено
+- Потоковая загрузка через `iter_chat_messages` / `iter_chat_chunks`.
+- Инкрементальные агрегаторы для модулей анализа.
+- Визуализация на Plotly (`HTML` + опциональный `PNG` через `kaleido`).
+- NLP на `spaCy` (RU/EN) с sentiment baseline.
+- Шаблонные отчеты `Jinja2`, основной формат `HTML`.
+- Доп. аналитика: reactions, social graph, edited/deleted.
 
 ## Установка
+```bash
+pip install -r requirements.txt
+python -m spacy download ru_core_news_sm
+python -m spacy download en_core_web_sm
+```
 
-1. **Клонируйте репозиторий (если используется Git):**
-   ```bash
-   git clone <your-repo-url>
-   cd chat_analyzer_project
-   ```
-   Или просто скачайте и распакуйте архив проекта.
+## Быстрый старт
+```bash
+python main.py data/result.json
+```
 
-2. **Создайте и активируйте виртуальное окружение (рекомендуется):**
-   ```bash
-   python -m venv venv
-   # Windows
-   .\venv\Scripts\activate
-   # macOS/Linux
-   source venv/bin/activate
-   ```
+## CLI
+```bash
+python main.py INPUT_JSON \
+  --output-dir output \
+  --report-format html \
+  --profile full \
+  --chunk-size 50000
+```
 
-3. **Установите зависимости:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Основные параметры
+- `--timezone`: по умолчанию системная таймзона (`tzlocal`).
+- `--report-format`: `html|json|md|all` (default `html`).
+- `--modules`: выбор модулей (`summary activity temporal user message dialog nlp anomaly social`).
+- `--chunk-size`: размер чанка для stream-пайплайна.
+- `--max-workers`: процессы для NLP `spaCy.pipe`.
+- `--disable-interactive`: не сохранять HTML-графики.
+- `--skip-plots`: не строить графики.
 
-## Использование
+## Публичные API
+- `iter_chat_messages(file_path, normalize=True)`
+- `iter_chat_chunks(file_path, chunk_size=50000)`
+- `load_and_process_chat_data(...)` — deprecated wrapper.
 
-1. **Поместите ваш JSON файл экспорта чата** (например, `result.json`) в директорию `data/` (или укажите полный путь к
-   файлу при запуске).
-
-2. **Запустите главный скрипт `main.py` из корневой директории проекта (`chat_analyzer_project/`):**
-
-   ```bash
-   python main.py data/result.json
-   ```
-
-    * По умолчанию результаты (графики и лог `analysis.log`) будут сохранены в директорию `output/`.
-    * Временная зона по умолчанию для сводки: `Europe/Moscow`.
-
-3. **Параметры командной строки:**
-
-    * `input_file`: (Обязательный) Путь к входному JSON файлу.
-    * `-o` или `--output-dir`: Директория для сохранения результатов (по умолчанию: `output`).
-    * `-tz` или `--timezone`: Временная зона для дат в сводке (по умолчанию: `Europe/Moscow`). Список зон:
-      `import pytz; print(pytz.all_timezones)`.
-    * `-log` или `--log-level`: Уровень логирования (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`, по умолчанию:
-      `INFO`).
-    * `--log-file`: Записывать логи в файл `analysis.log` внутри `--output-dir`.
-    * `--skip-plots`: Пропустить генерацию и сохранение всех графиков (анализ все равно будет выполнен и статистика
-      выведена в консоль/лог).
-    * `--max-legend`: Макс. число элементов в легендах графиков (по умолчанию: 10).
-    * `--anomaly-threshold`: Порог Z-score для аномальных дней (по умолчанию: 2.0).
-    * `--response-time-limit`: Макс. интервал (минуты) для учета времени ответа (по умолчанию: 60.0).
-    * `--session-gap`: Макс. разрыв (минуты) для определения сессий (по умолчанию: 30.0).
-
-   **Пример с кастомными параметрами:**
-   ```bash
-   python main.py path/to/your/chat.json -o results_chat1 -tz America/New_York --log-level DEBUG --skip-plots
-   ```
-
-## Зависимости
-
-Основные зависимости перечислены в `requirements.txt`:
-
-* pandas
-* matplotlib
-* seaborn
-* wordcloud
-* statsmodels
-* scipy
-
-## Примечания
-
-* Анализ NLP (ключевые слова, облако слов, словарь) использует очень простую "нормализацию" (приведение к нижнему
-  регистру и удаление стоп-слов/пунктуации). Для более точного анализа может потребоваться интеграция с полноценными
-  NLP-библиотеками (`pymorphy2`, `nltk`, `spaCy` и т.д.).
-* Обнаружение эмодзи основано на Unicode-диапазонах и может не охватывать абсолютно все возможные варианты или кастомные
-  эмодзи платформ.
+## Выходные артефакты
+- `output/report.html` (или `report.md/report.json`).
+- `output/charts/*.html` и `output/charts/*.png`.
+- `output/social_graph.html` (если есть данные для графа).
