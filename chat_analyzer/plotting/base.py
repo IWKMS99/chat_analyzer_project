@@ -1,5 +1,6 @@
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from typing import Optional
 
@@ -52,8 +53,12 @@ def finalize_plotly_figure(
     if png_path:
         _ensure_parent(png_path)
         try:
-            fig.write_image(png_path, scale=2)
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(fig.write_image, png_path, scale=2)
+                future.result(timeout=20)
             saved_png = png_path
+        except TimeoutError:
+            logger.warning("Таймаут при сохранении PNG для %s (kaleido). Файл пропущен.", name)
         except Exception as exc:
             logger.warning("Не удалось сохранить PNG для %s: %s", name, exc)
 

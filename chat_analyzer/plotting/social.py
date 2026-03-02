@@ -22,8 +22,13 @@ except ImportError:  # pragma: no cover
 def _build_graph_html(edges: pd.DataFrame, path: str) -> str | None:
     if edges.empty or nx is None or Network is None:
         return None
+    clean_edges = edges.dropna(subset=["from", "to", "count"]).copy()
+    clean_edges = clean_edges[(clean_edges["from"].astype(str).str.strip() != "") & (clean_edges["to"].astype(str).str.strip() != "")]
+    if clean_edges.empty:
+        return None
+
     graph = nx.DiGraph()
-    for _, row in edges.iterrows():
+    for _, row in clean_edges.iterrows():
         graph.add_edge(str(row["from"]), str(row["to"]), weight=float(row["count"]))
 
     net = Network(height="700px", width="100%", directed=True)

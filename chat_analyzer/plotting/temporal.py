@@ -9,7 +9,7 @@ def build_temporal_plots(data: dict, output_dir: str, disable_interactive: bool)
 
     response_df = data.get("response_df", pd.DataFrame())
     if not response_df.empty:
-        fig = px.histogram(response_df, x="response_min", nbins=50)
+        fig = px.bar(response_df, x="response_min", y="count")
         apply_default_layout(fig, "Распределение времени ответа", "Минуты", "Количество")
         artifacts["response_distribution"] = finalize_plotly_figure(
             fig,
@@ -21,7 +21,7 @@ def build_temporal_plots(data: dict, output_dir: str, disable_interactive: bool)
 
     intervals = data.get("interval_df", pd.DataFrame())
     if not intervals.empty:
-        fig = px.histogram(intervals, x="interval_sec", nbins=50)
+        fig = px.bar(intervals, x="interval_sec", y="count")
         apply_default_layout(fig, "Интервалы между сообщениями", "Секунды", "Количество")
         artifacts["message_intervals"] = finalize_plotly_figure(
             fig,
