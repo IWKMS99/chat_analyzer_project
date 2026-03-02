@@ -1,6 +1,7 @@
 # === Standard library ===
 import json
 import logging
+import os
 import warnings
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,6 +16,7 @@ except ImportError:  # pragma: no cover
     ijson = None
 
 logger = logging.getLogger(__name__)
+_FALLBACK_JSON_MAX_BYTES = 50 * 1024 * 1024
 
 
 class DataLoadError(Exception):
@@ -146,8 +148,15 @@ def _iter_messages_fallback(file_path: str) -> Iterator[Dict[str, Any]]:
 
 
 def _iter_messages(file_path: str) -> Iterator[Dict[str, Any]]:
+    try:
+        file_size = os.path.getsize(file_path)
+    except FileNotFoundError as exc:
+        raise DataLoadError(f"Файл {file_path} не найден.") from exc
+
     if ijson is None:
-        logger.warning("ijson недоступен, используется fallback через json.load().")
+        if file_size > _FALLBACK_JSON_MAX_BYTES:
+            raise DataLoadError("Библиотека ijson не установлена. Fallback через json.load() отключен для больших файлов.")
+        logger.warning("ijson недоступен, используется fallback через json.load() для небольшого файла.")
         yield from _iter_messages_fallback(file_path)
         return
 
@@ -156,7 +165,9 @@ def _iter_messages(file_path: str) -> Iterator[Dict[str, Any]]:
     except FileNotFoundError as exc:
         raise DataLoadError(f"Файл {file_path} не найден.") from exc
     except DataLoadError as exc:
-        logger.warning("Streaming-парсинг не удался (%s), используется fallback через json.load().", exc)
+        if file_size > _FALLBACK_JSON_MAX_BYTES:
+            raise DataLoadError(f"Streaming-парсинг не удался: {exc}") from exc
+        logger.warning("Streaming-парсинг не удался (%s), используется fallback через json.load() для небольшого файла.", exc)
         yield from _iter_messages_fallback(file_path)
 
 
@@ -164,26 +175,33 @@ def _normalize_message_record(message: Dict[str, Any]) -> Optional[MessageRecord
     if message.get("type") != "message":
         return None
 
+    is_deleted = bool(message.get("is_deleted") or message.get("deleted") or message.get("media_type") == "deleted_message")
     author = message.get("from")
-    if not author:
+    if not author and not is_deleted:
         return None
 
     text = _normalize_text(message.get("text", ""))
-    if not text.strip():
+    if not text.strip() and not is_deleted:
         return None
+    if not text.strip():
+        text = "[deleted]"
 
     parsed_date = pd.to_datetime(message.get("date"), errors="coerce", utc=True)
     if pd.isna(parsed_date):
         return None
 
+    safe_author = str(author).strip() if author else "UnknownUser"
+    if not safe_author:
+        safe_author = "UnknownUser"
+
     return MessageRecord(
         date=parsed_date,
-        sender=str(author).strip() or "UnknownUser",
-        sender_id=str(message.get("from_id") or author),
+        sender=safe_author,
+        sender_id=str(message.get("from_id") or safe_author),
         text=text,
         is_forwarded=bool(message.get("forwarded_from")),
         is_edited=bool(message.get("edited") or message.get("edited_unixtime")),
-        is_deleted=bool(message.get("is_deleted") or message.get("deleted") or message.get("media_type") == "deleted_message"),
+        is_deleted=is_deleted,
         reactions=_extract_reactions(message),
     )
 
@@ -204,9 +222,6 @@ def _rows_to_dataframe(rows: List[Dict[str, Any]]) -> pd.DataFrame:
     if df.empty:
         return df
 
-    df["date_only"] = df["date"].dt.date
-    df["hour"] = df["date"].dt.hour.astype("int8")
-    df["day_of_week"] = df["date"].dt.day_name().astype("category")
     df["text_length"] = df["text"].str.len().astype("int32")
 
     for col in ("from", "from_id"):
@@ -218,12 +233,9 @@ def _rows_to_dataframe(rows: List[Dict[str, Any]]) -> pd.DataFrame:
     return df[
         [
             "date",
-            "date_only",
-            "hour",
             "from",
             "from_id",
             "text",
-            "day_of_week",
             "text_length",
             "is_forwarded",
             "is_edited",
