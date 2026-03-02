@@ -7,6 +7,8 @@ import plotly.express as px
 from chat_analyzer.plotting.base import PlotArtifact, apply_default_layout, finalize_plotly_figure
 
 logger = logging.getLogger(__name__)
+MAX_SOCIAL_USERS = 50
+MAX_SOCIAL_EDGES = 400
 
 try:
     import networkx as nx
@@ -19,13 +21,28 @@ except ImportError:  # pragma: no cover
     Network = None
 
 
-def _build_graph_html(edges: pd.DataFrame, path: str) -> str | None:
+def _build_graph_html(edges: pd.DataFrame, path: str, max_users: int = MAX_SOCIAL_USERS, max_edges: int = MAX_SOCIAL_EDGES) -> str | None:
     if edges.empty or nx is None or Network is None:
         return None
     clean_edges = edges.dropna(subset=["from", "to", "count"]).copy()
     clean_edges = clean_edges[(clean_edges["from"].astype(str).str.strip() != "") & (clean_edges["to"].astype(str).str.strip() != "")]
     if clean_edges.empty:
         return None
+    clean_edges["count"] = pd.to_numeric(clean_edges["count"], errors="coerce").fillna(0.0)
+    clean_edges = clean_edges[clean_edges["count"] > 0]
+    if clean_edges.empty:
+        return None
+
+    influence = (
+        clean_edges.groupby("from")["count"].sum().add(clean_edges.groupby("to")["count"].sum(), fill_value=0.0)
+        .sort_values(ascending=False)
+        .head(max_users)
+        .index
+    )
+    clean_edges = clean_edges[clean_edges["from"].isin(influence) & clean_edges["to"].isin(influence)]
+    if clean_edges.empty:
+        return None
+    clean_edges = clean_edges.sort_values("count", ascending=False).head(max_edges)
 
     graph = nx.DiGraph()
     for _, row in clean_edges.iterrows():
@@ -42,16 +59,21 @@ def build_social_plots(data: dict, output_dir: str, disable_interactive: bool) -
     artifacts: dict[str, PlotArtifact] = {}
     extra_artifacts: dict[str, str] = {}
 
-    reaction_edges = data.get("reaction_edges", pd.DataFrame())
-    if not reaction_edges.empty:
-        pivot = reaction_edges.pivot(index="from", columns="to", values="count").fillna(0)
-        fig = px.imshow(pivot, text_auto=True, color_continuous_scale="Blues", aspect="auto")
-        apply_default_layout(fig, "Кто кому ставит реакции", "Кому", "Кто ставит")
-        artifacts["reaction_matrix"] = finalize_plotly_figure(
+    reactions = data.get("reaction_edges", pd.DataFrame())
+    if not reactions.empty:
+        safe_reactions = reactions.copy()
+        safe_reactions["count"] = pd.to_numeric(safe_reactions["count"], errors="coerce").fillna(0)
+        safe_reactions = safe_reactions[safe_reactions["count"] > 0]
+        top_reactions = safe_reactions.sort_values("count", ascending=False).head(MAX_SOCIAL_USERS)
+        if top_reactions.empty:
+            top_reactions = safe_reactions.head(0)
+        fig = px.bar(top_reactions, x="from", y="count")
+        apply_default_layout(fig, "Топ получателей реакций", "Участник", "Реакции")
+        artifacts["reaction_received"] = finalize_plotly_figure(
             fig,
-            "reaction_matrix",
-            f"{output_dir}/charts/reaction_matrix.html",
-            f"{output_dir}/charts/reaction_matrix.png",
+            "reaction_received",
+            f"{output_dir}/charts/reaction_received.html",
+            f"{output_dir}/charts/reaction_received.png",
             disable_interactive,
         )
 
