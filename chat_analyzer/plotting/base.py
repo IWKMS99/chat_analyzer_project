@@ -1,7 +1,8 @@
 import logging
+import multiprocessing as mp
 import os
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
+from queue import Empty
 from typing import Optional
 
 import plotly.graph_objects as go
@@ -35,6 +36,42 @@ def _ensure_parent(path: str) -> None:
         os.makedirs(parent, exist_ok=True)
 
 
+def _write_image_worker(fig_dict: dict, png_path: str, scale: int, result_queue) -> None:
+    try:
+        figure = go.Figure(fig_dict)
+        figure.write_image(png_path, scale=scale)
+        result_queue.put(None)
+    except Exception as exc:  # pragma: no cover
+        result_queue.put(str(exc))
+
+
+def _write_png_with_timeout(fig: go.Figure, png_path: str, timeout_seconds: int = 20, scale: int = 2) -> tuple[bool, str | None]:
+    ctx = mp.get_context("spawn")
+    result_queue = ctx.Queue(maxsize=1)
+    proc = ctx.Process(
+        target=_write_image_worker,
+        args=(fig.to_dict(), png_path, scale, result_queue),
+        daemon=True,
+    )
+    proc.start()
+    proc.join(timeout=timeout_seconds)
+
+    if proc.is_alive():
+        proc.terminate()
+        proc.join(timeout=5)
+        return False, "timeout"
+
+    error = None
+    try:
+        error = result_queue.get_nowait()
+    except Empty:
+        error = None
+
+    if error:
+        return False, str(error)
+    return proc.exitcode == 0, None
+
+
 def finalize_plotly_figure(
     fig: go.Figure,
     name: str,
@@ -52,15 +89,13 @@ def finalize_plotly_figure(
     saved_png = None
     if png_path:
         _ensure_parent(png_path)
-        try:
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(fig.write_image, png_path, scale=2)
-                future.result(timeout=20)
+        ok, error = _write_png_with_timeout(fig, png_path, timeout_seconds=20, scale=2)
+        if ok:
             saved_png = png_path
-        except TimeoutError:
+        elif error == "timeout":
             logger.warning("Таймаут при сохранении PNG для %s (kaleido). Файл пропущен.", name)
-        except Exception as exc:
-            logger.warning("Не удалось сохранить PNG для %s: %s", name, exc)
+        else:
+            logger.warning("Не удалось сохранить PNG для %s: %s", name, error)
 
     return PlotArtifact(name=name, figure=fig, html_path=html_path if not disable_interactive else None, png_path=saved_png)
 
