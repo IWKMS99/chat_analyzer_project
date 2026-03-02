@@ -23,10 +23,10 @@ _CYRILLIC_RE = re.compile(r"[а-яА-ЯёЁ]")
 _NEGATIONS = {"не", "нет", "not", "no", "never"}
 
 RU_POSITIVE = {
-    "круто", "класс", "отлично", "хорошо", "люблю", "супер", "рад", "счастлив", "спасибо", "красиво",
+    "круто", "класс", "отлично", "хорошо", "хороший", "люблю", "супер", "рад", "счастлив", "спасибо", "красиво",
 }
 RU_NEGATIVE = {
-    "плохо", "ужас", "ненавижу", "токс", "злюсь", "грустно", "печально", "бесит", "отстой", "мерзко",
+    "плохо", "плохой", "ужас", "ненавижу", "токс", "злюсь", "грустно", "печально", "бесит", "отстой", "мерзко",
 }
 EN_POSITIVE = {
     "good", "great", "awesome", "love", "nice", "happy", "thanks", "excellent", "amazing", "beautiful",
@@ -99,7 +99,7 @@ def _fallback_tokenize(texts: Iterable[str], min_len: int = 3) -> NlpBatchResult
     sentiments: List[float] = []
     for text in texts:
         cleaned = _clean_text(text).lower()
-        tokens = [tok for tok in _TOKEN_RE.findall(cleaned) if len(tok) >= min_len]
+        tokens = [tok for tok in _TOKEN_RE.findall(cleaned) if len(tok) >= min_len or tok in _NEGATIONS]
         tokens_per_text.append(tokens)
         sentiments.append(_score_sentiment_tokens(tokens))
     return NlpBatchResult(tokens_per_text=tokens_per_text, sentiment_scores=sentiments)
@@ -129,6 +129,7 @@ def process_texts_spacy(
             en_indices.append(idx)
 
     tokens_per_text: List[List[str]] = [[] for _ in texts]
+    sentiment_tokens_per_text: List[List[str]] = [[] for _ in texts]
 
     def _consume(indices: List[int], model):
         if not indices or model is None:
@@ -139,21 +140,27 @@ def process_texts_spacy(
             kwargs["n_process"] = n_process
         for original_idx, doc in zip(indices, model.pipe(selected, **kwargs)):
             tokens: List[str] = []
+            sentiment_tokens: List[str] = []
             for token in doc:
-                if token.is_space or token.is_punct or token.is_stop:
+                if token.is_space or token.is_punct:
                     continue
+                lower_text = token.text.lower().strip()
                 if not token.is_alpha:
                     continue
                 lemma = (token.lemma_ or token.text).lower().strip()
-                if len(lemma) < min_len:
+                if len(lemma) < min_len and lemma not in _NEGATIONS:
+                    continue
+                sentiment_tokens.append(lemma)
+                if token.is_stop and lower_text not in _NEGATIONS:
                     continue
                 tokens.append(lemma)
             tokens_per_text[original_idx] = tokens
+            sentiment_tokens_per_text[original_idx] = sentiment_tokens
 
     _consume(ru_indices, ru_model)
     _consume(en_indices, en_model)
 
-    sentiments = [_score_sentiment_tokens(tokens) for tokens in tokens_per_text]
+    sentiments = [_score_sentiment_tokens(tokens) for tokens in sentiment_tokens_per_text]
     return NlpBatchResult(tokens_per_text=tokens_per_text, sentiment_scores=sentiments)
 
 

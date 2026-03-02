@@ -11,3 +11,9 @@ def test_emoji_extraction_handles_combined_emoji():
     items = extract_emojis_from_text("Ок 👍🏽 и 😄")
     assert "👍🏽" in items
     assert "😄" in items
+
+
+def test_sentiment_keeps_negations():
+    result = process_texts_spacy(["не хорошо", "not good"], batch_size=8, n_process=1)
+    assert result.sentiment_scores[0] < 0
+    assert result.sentiment_scores[1] < 0
