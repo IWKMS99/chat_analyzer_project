@@ -25,7 +25,17 @@ def test_iter_chat_chunks_schema_and_types():
     chunks = list(iter_chat_chunks(str(FIXTURES / "chat_small.json"), chunk_size=2))
     assert chunks
     df = chunks[0]
-    assert {"from", "from_id", "text_length", "is_forwarded", "is_edited", "is_deleted", "reactions"}.issubset(df.columns)
+    assert {
+        "from",
+        "from_id",
+        "message_id",
+        "reply_to_message_id",
+        "text_length",
+        "is_forwarded",
+        "is_edited",
+        "is_deleted",
+        "reactions",
+    }.issubset(df.columns)
     assert str(df["text_length"].dtype) == "int32"
 
 

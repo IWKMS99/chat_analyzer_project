@@ -36,6 +36,8 @@ class MessageRecord:
     date: pd.Timestamp
     sender: str
     sender_id: str
+    message_id: Optional[int]
+    reply_to_message_id: Optional[int]
     text: str
     is_forwarded: bool
     is_edited: bool
@@ -85,6 +87,27 @@ def _extract_reactions(message: Dict[str, Any]) -> List[str]:
         return extracted
 
     return []
+
+
+def _safe_int(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_reply_to_message_id(message: Dict[str, Any]) -> Optional[int]:
+    direct = _safe_int(message.get("reply_to_message_id"))
+    if direct is not None:
+        return direct
+
+    reply = message.get("reply_to")
+    if isinstance(reply, dict):
+        return _safe_int(reply.get("message_id") or reply.get("reply_to_message_id"))
+
+    return None
 
 
 def _iter_messages_streaming(file_path: str) -> Iterator[Dict[str, Any]]:
@@ -198,6 +221,8 @@ def _normalize_message_record(message: Dict[str, Any]) -> Optional[MessageRecord
         date=parsed_date,
         sender=safe_author,
         sender_id=str(message.get("from_id") or safe_author),
+        message_id=_safe_int(message.get("id")),
+        reply_to_message_id=_extract_reply_to_message_id(message),
         text=text,
         is_forwarded=bool(message.get("forwarded_from")),
         is_edited=bool(message.get("edited") or message.get("edited_unixtime")),
@@ -235,6 +260,8 @@ def _rows_to_dataframe(rows: List[Dict[str, Any]]) -> pd.DataFrame:
             "date",
             "from",
             "from_id",
+            "message_id",
+            "reply_to_message_id",
             "text",
             "text_length",
             "is_forwarded",
@@ -257,6 +284,8 @@ def iter_chat_chunks(file_path: str, chunk_size: int = 50_000) -> Iterator[pd.Da
                 "date": record.date,
                 "from": record.sender,
                 "from_id": record.sender_id,
+                "message_id": record.message_id,
+                "reply_to_message_id": record.reply_to_message_id,
                 "text": record.text,
                 "is_forwarded": record.is_forwarded,
                 "is_edited": record.is_edited,
