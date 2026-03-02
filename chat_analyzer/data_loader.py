@@ -1,110 +1,280 @@
 # === Standard library ===
 import json
 import logging
-from typing import Optional
+import warnings
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, Iterator, List, Optional
 
-# === Data handling ===
+# === Third-party ===
 import pandas as pd
+
+try:
+    import ijson
+except ImportError:  # pragma: no cover
+    ijson = None
 
 logger = logging.getLogger(__name__)
 
 
-def load_and_process_chat_data(file_path: str) -> Optional[pd.DataFrame]:
-    """
-    Загружает JSON экспорт чата и преобразует в DataFrame.
+class DataLoadError(Exception):
+    """Базовая ошибка загрузки данных чата."""
 
-    Args:
-        file_path: Путь к JSON-файлу с экспортом чата.
-                   Ожидаемая структура: {'messages': [{'date': str, 'from': str, 'text': str/list, 'type': str}, ...]}
 
-    Returns:
-        DataFrame с полями date, date_only, hour, from, text, day_of_week, text_length, from_id
-        или None в случае ошибки.
-    """
+class EmptyDataError(DataLoadError):
+    """Не найдено сообщений для анализа."""
+
+
+class InvalidSchemaError(DataLoadError):
+    """JSON имеет неожиданную структуру."""
+
+
+@dataclass
+class MessageRecord:
+    date: pd.Timestamp
+    sender: str
+    sender_id: str
+    text: str
+    is_forwarded: bool
+    is_edited: bool
+    is_deleted: bool
+    reactions: List[str]
+
+
+def _normalize_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts: List[str] = []
+        for part in value:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and "text" in part:
+                parts.append(str(part["text"]))
+        return "".join(parts)
+    return str(value)
+
+
+def _extract_reactions(message: Dict[str, Any]) -> List[str]:
+    reactions = message.get("reactions")
+    if reactions is None:
+        return []
+    extracted: List[str] = []
+    if isinstance(reactions, list):
+        for item in reactions:
+            if isinstance(item, str):
+                extracted.append(item)
+            elif isinstance(item, dict):
+                value = item.get("reaction") or item.get("emoji") or item.get("text")
+                if value:
+                    extracted.append(str(value))
+        return extracted
+
+    if isinstance(reactions, dict):
+        candidates = reactions.get("recent") or reactions.get("results") or reactions.get("items") or []
+        if isinstance(candidates, list):
+            for item in candidates:
+                if isinstance(item, dict):
+                    value = item.get("reaction") or item.get("emoji") or item.get("text")
+                    if value:
+                        extracted.append(str(value))
+                elif isinstance(item, str):
+                    extracted.append(item)
+        return extracted
+
+    return []
+
+
+def _iter_messages_streaming(file_path: str) -> Iterator[Dict[str, Any]]:
+    if ijson is None:
+        raise DataLoadError("Библиотека ijson не установлена.")
+
+    with open(file_path, "rb") as f:
+        try:
+            yielded = False
+            for message in ijson.items(f, "messages.item"):
+                yielded = True
+                if isinstance(message, dict):
+                    yield message
+            if yielded:
+                return
+        except Exception as exc:  # pragma: no cover
+            raise DataLoadError(f"Ошибка чтения JSON (streaming messages.item): {exc}") from exc
+
+    with open(file_path, "rb") as f:
+        try:
+            yielded = False
+            for message in ijson.items(f, "item"):
+                yielded = True
+                if isinstance(message, dict):
+                    yield message
+            if yielded:
+                return
+        except Exception as exc:  # pragma: no cover
+            raise DataLoadError(f"Ошибка чтения JSON (streaming item): {exc}") from exc
+
+    raise InvalidSchemaError("Ожидался JSON-объект с ключом 'messages' или список сообщений.")
+
+
+def _iter_messages_fallback(file_path: str) -> Iterator[Dict[str, Any]]:
     try:
-        with open(file_path, encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             raw = json.load(f)
-    except FileNotFoundError:
-        logger.error(f"Файл {file_path} не найден.")
-        return None
-    except json.JSONDecodeError as e:
-        logger.error(f"Ошибка парсинга JSON: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Неожиданная ошибка при чтении файла {file_path}: {e}")
-        return None
+    except FileNotFoundError as exc:
+        raise DataLoadError(f"Файл {file_path} не найден.") from exc
+    except json.JSONDecodeError as exc:
+        raise DataLoadError(f"Ошибка парсинга JSON: {exc}") from exc
 
-    messages = raw.get('messages', [])
-    if not messages:
-        logger.warning("JSON не содержит ключ 'messages' или список сообщений пуст.")
-        # Попробуем найти сообщения в корне, если 'messages' нет (на всякий случай)
-        if isinstance(raw, list):
-            messages = raw
-        else:
-            logger.warning("Не найдено сообщений для анализа.")
-            return None
+    if isinstance(raw, dict):
+        messages = raw.get("messages")
+        if messages is None:
+            raise InvalidSchemaError("В JSON отсутствует ключ 'messages'.")
+        if not isinstance(messages, list):
+            raise InvalidSchemaError("Поле 'messages' должно быть списком.")
+        for message in messages:
+            if isinstance(message, dict):
+                yield message
+        return
 
-    # Фильтруем только сообщения с текстом и типом 'message'
-    msgs = [
-        m for m in messages
-        if isinstance(m, dict) and m.get('type') == 'message' and 'text' in m and m.get('from')
-    ]
-    if not msgs:
-        logger.warning("Нет текстовых сообщений типа 'message' с отправителем для анализа.")
-        return None
+    if isinstance(raw, list):
+        for message in raw:
+            if isinstance(message, dict):
+                yield message
+        return
 
-    df = pd.DataFrame(msgs)
+    raise InvalidSchemaError("Ожидался JSON-объект с ключом 'messages' или список сообщений.")
 
-    # Оставляем только нужные колонки на раннем этапе
-    df = df[['date', 'from', 'text', 'from_id']]  # Добавим 'from_id' если он есть
 
-    # Нормализация текста для обработки составных сообщений
-    def normalize_text(x):
-        if isinstance(x, str):
-            return x
-        if isinstance(x, list):
-            # Собираем текст из частей, обрабатывая строки и словари
-            parts = []
-            for part in x:
-                if isinstance(part, str):
-                    parts.append(part)
-                elif isinstance(part, dict) and 'text' in part:
-                    parts.append(str(part['text']))  # Убедимся, что текст - строка
-            return ''.join(parts)
-        return str(x)  # Преобразуем в строку на всякий случай
+def _iter_messages(file_path: str) -> Iterator[Dict[str, Any]]:
+    if ijson is None:
+        logger.warning("ijson недоступен, используется fallback через json.load().")
+        yield from _iter_messages_fallback(file_path)
+        return
 
-    df['text'] = df['text'].apply(normalize_text)
-    df = df[df['text'].astype(str).str.strip() != '']  # Удаляем сообщения с пустым текстом после нормализации
-
-    if df.empty:
-        logger.warning("Нет сообщений с непустым текстом после нормализации.")
-        return None
-
-    # Преобразование дат
     try:
-        # Пробуем разные форматы, если стандартный не сработал
-        df['date'] = pd.to_datetime(df['date'], errors='coerce', utc=True)
-        # Удаляем строки, где дата не распозналась
-        df.dropna(subset=['date'], inplace=True)
-        if df.empty:
-            logger.error("Не удалось распознать даты ни в одном сообщении.")
-            return None
-    except Exception as e:  # Ловим более общие ошибки парсинга дат
-        logger.error(f"Критическая ошибка преобразования дат: {e}")
+        yield from _iter_messages_streaming(file_path)
+    except FileNotFoundError as exc:
+        raise DataLoadError(f"Файл {file_path} не найден.") from exc
+    except DataLoadError as exc:
+        logger.warning("Streaming-парсинг не удался (%s), используется fallback через json.load().", exc)
+        yield from _iter_messages_fallback(file_path)
+
+
+def _normalize_message_record(message: Dict[str, Any]) -> Optional[MessageRecord]:
+    if message.get("type") != "message":
         return None
 
-    df['date_only'] = df['date'].dt.date
-    df['hour'] = df['date'].dt.hour
-    df['day_of_week'] = df['date'].dt.day_name()
-    df['text_length'] = df['text'].astype(str).str.len()  # Длина сообщения
+    author = message.get("from")
+    if not author:
+        return None
 
-    # Обработка анонимных пользователей (если 'from' пустой или специфический символ)
-    df['from'] = df['from'].replace(['', ' ', 'ㅤ', None], 'UnknownUser')
-    df['from'] = df['from'].fillna('UnknownUser')  # Обработка NaN
+    text = _normalize_text(message.get("text", ""))
+    if not text.strip():
+        return None
 
-    # Убедимся, что from_id существует, если нет - создадим на основе 'from'
-    if 'from_id' not in df.columns:
-        df['from_id'] = df['from']  # Используем 'from' как ID, если ID нет
+    parsed_date = pd.to_datetime(message.get("date"), errors="coerce", utc=True)
+    if pd.isna(parsed_date):
+        return None
 
-    logger.info(f"Загружено и обработано {len(df)} сообщений.")
-    return df[['date', 'date_only', 'hour', 'from', 'from_id', 'text', 'day_of_week', 'text_length']]
+    return MessageRecord(
+        date=parsed_date,
+        sender=str(author).strip() or "UnknownUser",
+        sender_id=str(message.get("from_id") or author),
+        text=text,
+        is_forwarded=bool(message.get("forwarded_from")),
+        is_edited=bool(message.get("edited") or message.get("edited_unixtime")),
+        is_deleted=bool(message.get("is_deleted") or message.get("deleted") or message.get("media_type") == "deleted_message"),
+        reactions=_extract_reactions(message),
+    )
+
+
+def iter_chat_messages(file_path: str, normalize: bool = True) -> Iterator[MessageRecord | Dict[str, Any]]:
+    """Итерирует сообщения чата в потоковом режиме."""
+    for message in _iter_messages(file_path):
+        if not normalize:
+            yield message
+            continue
+        record = _normalize_message_record(message)
+        if record is not None:
+            yield record
+
+
+def _rows_to_dataframe(rows: List[Dict[str, Any]]) -> pd.DataFrame:
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+
+    df["date_only"] = df["date"].dt.date
+    df["hour"] = df["date"].dt.hour.astype("int8")
+    df["day_of_week"] = df["date"].dt.day_name().astype("category")
+    df["text_length"] = df["text"].str.len().astype("int32")
+
+    for col in ("from", "from_id"):
+        df[col] = df[col].replace(["", " ", "ㅤ", None], "UnknownUser").fillna("UnknownUser").astype("category")
+
+    for col in ("is_forwarded", "is_edited", "is_deleted"):
+        df[col] = df[col].astype("bool")
+
+    return df[
+        [
+            "date",
+            "date_only",
+            "hour",
+            "from",
+            "from_id",
+            "text",
+            "day_of_week",
+            "text_length",
+            "is_forwarded",
+            "is_edited",
+            "is_deleted",
+            "reactions",
+        ]
+    ]
+
+
+def iter_chat_chunks(file_path: str, chunk_size: int = 50_000) -> Iterator[pd.DataFrame]:
+    """Итерирует чанки DataFrame с нормализованными сообщениями."""
+    if chunk_size <= 0:
+        raise ValueError("chunk_size должен быть положительным")
+
+    rows: List[Dict[str, Any]] = []
+    for record in iter_chat_messages(file_path, normalize=True):
+        rows.append(
+            {
+                "date": record.date,
+                "from": record.sender,
+                "from_id": record.sender_id,
+                "text": record.text,
+                "is_forwarded": record.is_forwarded,
+                "is_edited": record.is_edited,
+                "is_deleted": record.is_deleted,
+                "reactions": record.reactions,
+            }
+        )
+        if len(rows) >= chunk_size:
+            yield _rows_to_dataframe(rows)
+            rows = []
+
+    if rows:
+        yield _rows_to_dataframe(rows)
+
+
+def load_and_process_chat_data(file_path: str, chunk_size: int = 50_000) -> pd.DataFrame:
+    """Deprecated: используйте iter_chat_messages/iter_chat_chunks."""
+    warnings.warn(
+        "load_and_process_chat_data устарела, используйте iter_chat_chunks/iter_chat_messages",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    chunks = [chunk for chunk in iter_chat_chunks(file_path=file_path, chunk_size=chunk_size) if not chunk.empty]
+    if not chunks:
+        raise EmptyDataError("Нет текстовых сообщений типа 'message' с отправителем для анализа.")
+
+    df = pd.concat(chunks, ignore_index=True)
+    if df.empty:
+        raise EmptyDataError("Не найдено сообщений после фильтрации.")
+
+    logger.info("Загружено и обработано %s сообщений.", len(df))
+    return df
