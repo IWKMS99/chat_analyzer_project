@@ -7,5 +7,10 @@
     "web:dev": "pnpm --filter @chat-analyzer/web dev",
     "web:build": "pnpm --filter @chat-analyzer/web build",
     "web:smoke": "pnpm --filter @chat-analyzer/web test:smoke"
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch": "3.1.4"
+    }
   }
 }
