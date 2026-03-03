@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Callable
 
 
 STATUS_QUEUED = "queued"
@@ -44,40 +43,8 @@ def iso_now() -> str:
 
 
 class AnalysisRepository:
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-
-    def _connect(self) -> sqlite3.Connection:
-        os.makedirs(os.path.dirname(self.db_path) or ".", exist_ok=True)
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
-        conn.execute("PRAGMA busy_timeout=5000")
-        return conn
-
-    def init_db(self) -> None:
-        with closing(self._connect()) as conn, conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS analyses (
-                    id TEXT PRIMARY KEY,
-                    status TEXT NOT NULL,
-                    phase TEXT NOT NULL,
-                    progress_pct INTEGER NOT NULL,
-                    eta_sec INTEGER,
-                    timezone TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    upload_path TEXT NOT NULL,
-                    result_path TEXT,
-                    warnings_json TEXT NOT NULL,
-                    error_code TEXT,
-                    error_message TEXT
-                )
-                """
-            )
+    def __init__(self, connection_factory: Callable[[], sqlite3.Connection]):
+        self._connection_factory = connection_factory
 
     def create_analysis(self, analysis_id: str, timezone_name: str, upload_path: str, ttl_seconds: int) -> dict[str, Any]:
         created_at = utcnow()
@@ -98,7 +65,7 @@ class AnalysisRepository:
             "error_code": None,
             "error_message": None,
         }
-        with closing(self._connect()) as conn, conn:
+        with closing(self._connection_factory()) as conn, conn:
             conn.execute(
                 """
                 INSERT INTO analyses (
@@ -116,7 +83,7 @@ class AnalysisRepository:
         return payload
 
     def get_analysis(self, analysis_id: str) -> dict[str, Any] | None:
-        with closing(self._connect()) as conn:
+        with closing(self._connection_factory()) as conn:
             row = conn.execute("SELECT * FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
         if row is None:
             return None
@@ -134,14 +101,14 @@ class AnalysisRepository:
         fields["updated_at"] = iso_now()
         assignments = ", ".join([f"{key} = :{key}" for key in fields])
         fields["analysis_id"] = analysis_id
-        with closing(self._connect()) as conn, conn:
+        with closing(self._connection_factory()) as conn, conn:
             conn.execute(f"UPDATE analyses SET {assignments} WHERE id = :analysis_id", fields)
 
     def set_warnings(self, analysis_id: str, warnings: list[str]) -> None:
         self.update_analysis(analysis_id, warnings_json=json.dumps(warnings, ensure_ascii=False))
 
     def mark_running_as_failed(self) -> None:
-        with closing(self._connect()) as conn, conn:
+        with closing(self._connection_factory()) as conn, conn:
             conn.execute(
                 """
                 UPDATE analyses
@@ -160,7 +127,7 @@ class AnalysisRepository:
 
     def list_recent_analyses(self, limit: int = 20) -> list[dict[str, Any]]:
         safe_limit = max(1, min(limit, 200))
-        with closing(self._connect()) as conn:
+        with closing(self._connection_factory()) as conn:
             rows = conn.execute(
                 "SELECT * FROM analyses ORDER BY created_at DESC LIMIT ?",
                 (safe_limit,),
@@ -169,17 +136,17 @@ class AnalysisRepository:
 
     def list_expired_analyses(self, now_iso: str | None = None) -> list[dict[str, Any]]:
         compare = now_iso or iso_now()
-        with closing(self._connect()) as conn:
+        with closing(self._connection_factory()) as conn:
             rows = conn.execute("SELECT * FROM analyses WHERE expires_at <= ?", (compare,)).fetchall()
         return [self._row_to_dict(row) for row in rows]
 
     def delete_analysis(self, analysis_id: str) -> None:
-        with closing(self._connect()) as conn, conn:
+        with closing(self._connection_factory()) as conn, conn:
             conn.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,))
 
     def healthcheck(self) -> bool:
         try:
-            with closing(self._connect()) as conn:
+            with closing(self._connection_factory()) as conn:
                 conn.execute("SELECT 1")
             return True
         except sqlite3.Error:

@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from chat_analyzer_api.api.router import router as analyses_router
 from chat_analyzer_api.core.config import get_settings
+from chat_analyzer_api.db.connection import SQLiteConnectionFactory
 from chat_analyzer_api.db.repo import AnalysisRepository
 from chat_analyzer_api.middleware.rate_limit import InMemoryRateLimiter, RateLimitMiddleware
 from chat_analyzer_api.middleware.request_logging import RequestLoggingMiddleware
@@ -19,8 +20,7 @@ from chat_analyzer_api.storage.file_storage import FileStorage
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    repo = AnalysisRepository(settings.sqlite_path)
-    repo.init_db()
+    repo = AnalysisRepository(SQLiteConnectionFactory(settings.sqlite_path))
     repo.mark_running_as_failed()
 
     storage = FileStorage(base_dir=settings.storage_base_dir)
