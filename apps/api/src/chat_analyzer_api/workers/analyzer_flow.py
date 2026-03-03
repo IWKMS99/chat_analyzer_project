@@ -86,21 +86,47 @@ def analyze_chat_file(file_path: str, timezone_name: str, progress_hook: Progres
     got_any = False
     nlp_enabled = True
 
-    if progress_hook:
-        progress_hook("parsing", 5, None)
+    last_progress = -1
+    analyzing_progress = 10
 
-    for chunk_idx, chunk in enumerate(iter_chat_chunks(file_path, chunk_size=50_000), start=1):
+    def emit_progress(phase: str, progress_pct: int, eta_sec: int | None = None) -> None:
+        nonlocal last_progress
+        if not progress_hook:
+            return
+        normalized = max(0, min(progress_pct, 100))
+        if normalized <= last_progress:
+            return
+        last_progress = normalized
+        progress_hook(phase, normalized, eta_sec)
+
+    def bump_analyzing(delta: int) -> None:
+        nonlocal analyzing_progress
+        analyzing_progress = min(85, analyzing_progress + max(1, delta))
+        emit_progress("analyzing", analyzing_progress, None)
+
+    emit_progress("parsing", 5, None)
+
+    for chunk in iter_chat_chunks(file_path, chunk_size=50_000):
         got_any = True
         chunk = localize_chunk(chunk, resolved_tz)
+        emit_progress("analyzing", analyzing_progress, None)
 
         summary.update(chunk)
+        bump_analyzing(4)
         activity.update(chunk)
+        bump_analyzing(5)
         temporal.update(chunk)
+        bump_analyzing(5)
         user.update(chunk)
+        bump_analyzing(5)
         message.update(chunk)
+        bump_analyzing(5)
         dialog.update(chunk)
+        bump_analyzing(5)
         anomaly.update(chunk)
+        bump_analyzing(5)
         social.update(chunk)
+        bump_analyzing(5)
 
         if nlp_enabled:
             try:
@@ -108,24 +134,22 @@ def analyze_chat_file(file_path: str, timezone_name: str, progress_hook: Progres
             except (RuntimeError, ValueError, TypeError, OSError) as exc:  # pragma: no cover - runtime guard
                 nlp_enabled = False
                 module_warnings["nlp"].append(f"NLP degraded: {type(exc).__name__}: {exc}")
-
-        if progress_hook:
-            progress = min(85, 10 + chunk_idx)
-            progress_hook("analyzing", progress, None)
+        bump_analyzing(6)
 
     if not got_any:
         raise EmptyDataError("No messages available for analysis")
 
-    if progress_hook:
-        progress_hook("serializing", 90, None)
+    emit_progress("serializing", 90, None)
 
     core = summary.result()
+    emit_progress("serializing", 91, None)
 
     temporal_payload = temporal.result()
     user_payload = user.result()
     message_payload = message.result()
     dialog_payload = dialog.result()
     social_payload = social.result()
+    emit_progress("serializing", 93, None)
 
     nlp_data = {
         "keywords": [],
@@ -143,6 +167,7 @@ def analyze_chat_file(file_path: str, timezone_name: str, progress_hook: Progres
             "sentiment_user": dataframe_to_records(payload.get("sentiment_user", pd.DataFrame())),
             "sentiment_day": dataframe_to_records(payload.get("sentiment_day", pd.DataFrame())),
         }
+    emit_progress("serializing", 94, None)
 
     anomaly_payload = anomaly.result()
 
@@ -234,7 +259,6 @@ def analyze_chat_file(file_path: str, timezone_name: str, progress_hook: Progres
         },
     }
 
-    if progress_hook:
-        progress_hook("serializing", 95, 0)
+    emit_progress("serializing", 95, 0)
 
     return result

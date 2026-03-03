@@ -222,7 +222,7 @@ def _safe_wide_bar(
 
 
 def _chart_activity_hourly(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
-    return _activity_wide_line(dataset_name, rows, "hour", "ordinal")
+    return _activity_wide_line(dataset_name, rows, "hour", "ordinal", sort=list(range(24)))
 
 
 def _chart_activity_weekday(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
@@ -240,7 +240,7 @@ def _chart_activity_monthly(dataset_name: str, rows: DatasetRows) -> ChartDefini
 
 
 def _chart_activity_periods(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
-    return _activity_wide_bar(dataset_name, rows, "period", "nominal")
+    return _activity_wide_bar(dataset_name, rows, "period", "nominal", sort=["night", "morning", "day", "evening"])
 
 
 def _chart_temporal_response(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
@@ -341,6 +341,7 @@ def _chart_message_short_long_hourly(dataset_name: str, rows: DatasetRows) -> Ch
         y_field="count",
         color_field="message_type",
         tooltip_fields=["hour", "from", "message_type", "count"],
+        sort=list(range(24)),
         semantic_kind="categorical_breakdown",
         chart_kind="bar",
     ) or _fallback_chart(dataset_name, rows) or _chart(
@@ -351,6 +352,7 @@ def _chart_message_short_long_hourly(dataset_name: str, rows: DatasetRows) -> Ch
         "count",
         color_field="message_type",
         tooltip_fields=["hour", "from", "message_type", "count"],
+        sort=list(range(24)),
         semantic_kind="categorical_breakdown",
         chart_kind="bar",
     )
@@ -366,6 +368,7 @@ def _chart_dialog_hour_median(dataset_name: str, rows: DatasetRows) -> ChartDefi
         y_field="median_gap",
         color_field="from",
         tooltip_fields=["hour", "from", "median_gap"],
+        sort=list(range(24)),
         semantic_kind="time_series",
         chart_kind="line",
     ) or _fallback_chart(dataset_name, rows) or _chart(
@@ -376,6 +379,7 @@ def _chart_dialog_hour_median(dataset_name: str, rows: DatasetRows) -> ChartDefi
         "median_gap",
         color_field="from",
         tooltip_fields=["hour", "from", "median_gap"],
+        sort=list(range(24)),
         semantic_kind="time_series",
         chart_kind="line",
     )

@@ -113,13 +113,6 @@ class TaskRunner:
                     eta_sec=eta_sec,
                 )
 
-            self.repo.update_analysis(
-                analysis_id,
-                status=STATUS_RUNNING,
-                phase=PHASE_ANALYZING,
-                progress_pct=10,
-                eta_sec=None,
-            )
             analysis_result = analyze_chat_file(temp_file_path, analysis["timezone"], progress_hook=on_progress)
             dashboard = build_dashboard_payload(analysis_id=analysis_id, analysis_result=analysis_result)
 
