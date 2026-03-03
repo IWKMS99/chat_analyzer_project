@@ -1,7 +1,7 @@
 services:
   api:
     build:
-      context: ..
+      context: .
       dockerfile: apps/api/Dockerfile
     environment:
       APP_NAME: chat-analyzer-api
@@ -18,18 +18,16 @@ services:
       CHAT_ANALYZER_FALLBACK_JSON_MAX_BYTES: ${CHAT_ANALYZER_FALLBACK_JSON_MAX_BYTES:-52428800}
     volumes:
       - backend_data:/app/backend_data
-    ports:
-      - "8000:8000"
     command: >
       sh -c "uv run alembic -c apps/api/alembic.ini upgrade head &&
       uv run uvicorn chat_analyzer_api.main:app --host 0.0.0.0 --port 8000"
 
   web:
     build:
-      context: ..
+      context: .
       dockerfile: apps/web/Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     ports:
       - "8080:80"
     depends_on:
