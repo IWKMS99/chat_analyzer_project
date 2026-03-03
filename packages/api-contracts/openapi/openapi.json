@@ -1,0 +1,913 @@
+{
+  "components": {
+    "schemas": {
+      "AnalysisCreatedResponse": {
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "status",
+          "created_at"
+        ],
+        "title": "AnalysisCreatedResponse",
+        "type": "object"
+      },
+      "AnalysisListItem": {
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "progress_pct": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress Pct",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "status",
+          "phase",
+          "progress_pct",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AnalysisListItem",
+        "type": "object"
+      },
+      "AnalysisListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "AnalysisListResponse",
+        "type": "object"
+      },
+      "AnalysisStatusResponse": {
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "eta_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Sec"
+          },
+          "phase": {
+            "enum": [
+              "parsing",
+              "analyzing",
+              "serializing",
+              "storing",
+              "done",
+              "failed"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "progress_pct": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress Pct",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "status",
+          "phase",
+          "progress_pct"
+        ],
+        "title": "AnalysisStatusResponse",
+        "type": "object"
+      },
+      "Body_create_analysis_api_analyses_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "UTC",
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_analysis_api_analyses_post",
+        "type": "object"
+      },
+      "ChartConfig": {
+        "properties": {
+          "aggregation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregation"
+          },
+          "formatters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Formatters",
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "line",
+              "bar",
+              "area",
+              "scatter",
+              "histogram"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series"
+          },
+          "x": {
+            "title": "X",
+            "type": "string"
+          },
+          "y": {
+            "title": "Y",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "x",
+          "y"
+        ],
+        "title": "ChartConfig",
+        "type": "object"
+      },
+      "DashboardColumnMeta": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "temporal",
+              "quantitative",
+              "ordinal",
+              "nominal",
+              "unknown"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "DashboardColumnMeta",
+        "type": "object"
+      },
+      "DashboardResponse": {
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "dataset_meta": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DatasetMeta"
+            },
+            "title": "Dataset Meta",
+            "type": "object"
+          },
+          "datasets": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "title": "Datasets",
+            "type": "object"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "schema_version": {
+            "const": "2.1",
+            "default": "2.1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "tabs": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardTab"
+            },
+            "title": "Tabs",
+            "type": "array"
+          },
+          "widgets": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardWidget"
+            },
+            "title": "Widgets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "summary",
+          "tabs",
+          "widgets",
+          "datasets",
+          "metadata"
+        ],
+        "title": "DashboardResponse",
+        "type": "object"
+      },
+      "DashboardTab": {
+        "properties": {
+          "default_open_sections": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Default Open Sections",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "layout": {
+            "default": "two-column",
+            "enum": [
+              "single",
+              "two-column",
+              "masonry"
+            ],
+            "title": "Layout",
+            "type": "string"
+          },
+          "order": {
+            "minimum": 0.0,
+            "title": "Order",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "order"
+        ],
+        "title": "DashboardTab",
+        "type": "object"
+      },
+      "DashboardWidget": {
+        "properties": {
+          "chart_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChartConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "collapsed_by_default": {
+            "default": false,
+            "title": "Collapsed By Default",
+            "type": "boolean"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "empty_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empty State"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "priority": {
+            "default": 100,
+            "minimum": 0.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "section": {
+            "default": "main",
+            "title": "Section",
+            "type": "string"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "enum": [
+                  "info",
+                  "warning",
+                  "error"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "tab_id": {
+            "title": "Tab Id",
+            "type": "string"
+          },
+          "table_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TableConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "chart",
+              "table",
+              "kpi",
+              "text"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "vega_lite_spec": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vega Lite Spec"
+          }
+        },
+        "required": [
+          "id",
+          "tab_id",
+          "type",
+          "title"
+        ],
+        "title": "DashboardWidget",
+        "type": "object"
+      },
+      "DatasetMeta": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardColumnMeta"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "recommended_widget": {
+            "default": "both",
+            "enum": [
+              "chart",
+              "table",
+              "both"
+            ],
+            "title": "Recommended Widget",
+            "type": "string"
+          },
+          "row_count": {
+            "minimum": 0.0,
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "semantic_kind": {
+            "default": "table",
+            "title": "Semantic Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "row_count"
+        ],
+        "title": "DatasetMeta",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "sqlite_ok": {
+            "title": "Sqlite Ok",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "storage_ok": {
+            "title": "Storage Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "sqlite_ok",
+          "storage_ok"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "TableConfig": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "default_limit": {
+            "default": 25,
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Default Limit",
+            "type": "integer"
+          },
+          "format": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Format",
+            "type": "object"
+          },
+          "sortable": {
+            "default": true,
+            "title": "Sortable",
+            "type": "boolean"
+          }
+        },
+        "title": "TableConfig",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "chat-analyzer-api",
+    "version": "2.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/analyses": {
+      "get": {
+        "operationId": "list_analyses_api_analyses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Analyses",
+        "tags": [
+          "analyses"
+        ]
+      },
+      "post": {
+        "operationId": "create_analysis_api_analyses_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_analysis_api_analyses_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisCreatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Analysis",
+        "tags": [
+          "analyses"
+        ]
+      }
+    },
+    "/api/analyses/{analysis_id}": {
+      "delete": {
+        "operationId": "delete_analysis_api_analyses__analysis_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Analysis",
+        "tags": [
+          "analyses"
+        ]
+      }
+    },
+    "/api/analyses/{analysis_id}/dashboard": {
+      "get": {
+        "operationId": "get_analysis_dashboard_api_analyses__analysis_id__dashboard_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analysis Dashboard",
+        "tags": [
+          "analyses"
+        ]
+      }
+    },
+    "/api/analyses/{analysis_id}/status": {
+      "get": {
+        "operationId": "get_analysis_status_api_analyses__analysis_id__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analysis Status",
+        "tags": [
+          "analyses"
+        ]
+      }
+    },
+    "/api/healthz": {
+      "get": {
+        "operationId": "healthz_api_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "analyses"
+        ]
+      }
+    }
+  }
+}
