@@ -27,29 +27,6 @@ def build_dashboard_payload(analysis_id: str, analysis_result: dict[str, Any]) -
     datasets: dict[str, list[dict[str, Any]]] = {}
     dataset_meta: dict[str, dict[str, Any]] = {}
 
-    overview_kpis = [
-        ("total_messages", "Messages", "integer"),
-        ("participants", "Participants", "integer"),
-        ("start", "Start", "datetime"),
-        ("end", "End", "datetime"),
-        ("timezone", "Timezone", "text"),
-    ]
-    for priority, (key, title, value_format) in enumerate(overview_kpis, start=1):
-        widgets.append(
-            {
-                "id": f"kpi_{key}",
-                "tab_id": "overview",
-                "type": "kpi",
-                "title": title,
-                "priority": priority,
-                "section": "highlights",
-                "collapsed_by_default": False,
-                "value": summary.get(key),
-                "format": value_format,
-                "severity": "info",
-            }
-        )
-
     for idx, module_name in enumerate(sorted(modules.keys()), start=1):
         module_payload = modules.get(module_name)
         if not isinstance(module_payload, dict):
@@ -87,8 +64,11 @@ def build_dashboard_payload(analysis_id: str, analysis_result: dict[str, Any]) -
             )
 
         for key, value in data.items():
+            if (module_name, key) in _SUPPRESSED_DATASETS:
+                continue
+
             if not isinstance(value, list):
-                _append_scalar_widgets(widgets, tab_id, key, value)
+                _append_scalar_widgets(widgets, tab_id, module_name, key, value)
                 continue
 
             rows = [row for row in value if isinstance(row, dict)]
@@ -157,8 +137,10 @@ def build_dashboard_payload(analysis_id: str, analysis_result: dict[str, Any]) -
     }
 
 
-def _append_scalar_widgets(widgets: list[dict[str, Any]], tab_id: str, key: str, value: Any) -> None:
+def _append_scalar_widgets(widgets: list[dict[str, Any]], tab_id: str, module_name: str, key: str, value: Any) -> None:
     if isinstance(value, (int, float, str)):
+        if not _is_allowed_scalar_kpi(module_name, key, None):
+            return
         widgets.append(
             {
                 "id": f"{tab_id}_{_slug(key)}_kpi",
@@ -178,6 +160,8 @@ def _append_scalar_widgets(widgets: list[dict[str, Any]], tab_id: str, key: str,
     if isinstance(value, dict):
         for sub_key, sub_value in value.items():
             if isinstance(sub_value, (int, float, str)):
+                if not _is_allowed_scalar_kpi(module_name, key, sub_key):
+                    continue
                 widgets.append(
                     {
                         "id": f"{tab_id}_{_slug(key)}_{_slug(sub_key)}_kpi",
@@ -204,6 +188,26 @@ def _title(value: str) -> str:
     return value.replace("_", " ").strip().title()
 
 
+def _is_allowed_scalar_kpi(module_name: str, key: str, sub_key: str | None) -> bool:
+    return (module_name, key, sub_key) in _ALLOWED_SCALAR_KPIS
+
+
 _TABLE_ONLY_DATASETS = {
     ("dialog", "sessions"),
+}
+
+_SUPPRESSED_DATASETS = {
+    ("user", "avg_length"),
+    ("user", "message_counts"),
+    ("temporal", "daily_df"),
+    ("anomaly", "anomalies"),
+    ("social", "reply_edges"),
+}
+
+_ALLOWED_SCALAR_KPIS: set[tuple[str, str, str | None]] = {
+    ("temporal", "avg_response_min", None),
+    ("anomaly", "metrics", "mode"),
+    ("anomaly", "metrics", "threshold"),
+    ("anomaly", "metrics", "robust_count"),
+    ("anomaly", "metrics", "zscore_count"),
 }
