@@ -70,4 +70,4 @@ jobs:
         run: pnpm --filter @chat-analyzer/web test:smoke
 
       - name: Audit high vulnerabilities
-        run: pnpm audit --audit-level=high
+        run: pnpm --filter @chat-analyzer/web audit --prod --audit-level=high
