@@ -1,6 +1,6 @@
 services:
   api:
-    image: ${API_IMAGE:-ghcr.io/IWKMS99/chat-analyzer-api:latest}
+    image: ${API_IMAGE:-ghcr.io/iwkms99/chat-analyzer-api:latest}
     environment:
       APP_NAME: chat-analyzer-api
       APP_VERSION: ${APP_VERSION:-0.1.0}
@@ -19,7 +19,7 @@ services:
       - backend_data:/app/backend_data
 
   web:
-    image: ${WEB_IMAGE:-ghcr.io/IWKMS99/chat-analyzer-web:latest}
+    image: ${WEB_IMAGE:-ghcr.io/iwkms99/chat-analyzer-web:latest}
     ports:
       - "8080:80"
     depends_on:
