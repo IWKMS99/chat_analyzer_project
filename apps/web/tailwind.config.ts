@@ -5,15 +5,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#10213a",
-        mint: "#b7f3cf",
-        ocean: "#1f7a8c",
-        sand: "#f4efe7"
+        ink: "var(--color-ink)",
+        mint: "var(--color-accent-soft)",
+        ocean: "var(--color-accent-strong)",
+        sand: "var(--bg-canvas)"
       },
       fontFamily: {
         heading: ["'Space Grotesk'", "sans-serif"],
         body: ["'IBM Plex Sans'", "sans-serif"]
-      }
+      },
+      boxShadow: {
+        soft: "var(--surface-shadow)",
+      },
+      borderRadius: {
+        card: "var(--radius-card)",
+      },
+      transitionDuration: {
+        fast: "var(--motion-fast)",
+        base: "var(--motion-normal)",
+      },
     }
   },
   plugins: []

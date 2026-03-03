@@ -1,6 +1,26 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg-canvas: #f6f2eb;
+  --bg-accent: #eef2fb;
+  --surface: rgba(255, 255, 255, 0.8);
+  --surface-muted: rgba(255, 255, 255, 0.62);
+  --surface-border: rgba(148, 163, 184, 0.26);
+  --surface-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+
+  --color-ink: #1f2a3b;
+  --color-accent-soft: #d9e8ff;
+  --color-accent-strong: #3b6ea8;
+  --color-accent-deep: #244665;
+
+  --radius-card: 1.1rem;
+  --motion-fast: 160ms;
+  --motion-normal: 260ms;
+}
 
 * {
   box-sizing: border-box;
@@ -11,4 +31,40 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
+}
+
+body {
+  font-family: "IBM Plex Sans", sans-serif;
+  color: var(--color-ink);
+  background: radial-gradient(circle at 15% 0%, var(--bg-canvas) 0%, #f4f0e9 40%, var(--bg-accent) 100%);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .surface {
+    @apply rounded-[var(--radius-card)] border border-[var(--surface-border)] bg-[var(--surface)] shadow-sm backdrop-blur;
+  }
+
+  .surface-elevated {
+    @apply surface shadow-[var(--surface-shadow)];
+  }
+
+  .surface-muted {
+    @apply rounded-[var(--radius-card)] border border-[var(--surface-border)] bg-[var(--surface-muted)] shadow-sm backdrop-blur;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
