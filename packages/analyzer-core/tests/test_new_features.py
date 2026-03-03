@@ -4,7 +4,7 @@ import pandas as pd
 
 from chat_analyzer_core.aggregators import AnomalyAggregator, DialogAggregator, SocialAggregator
 from chat_analyzer_core.data_loader import iter_chat_chunks
-from chat_analyzer_api.orchestration.analyzer_flow import localize_chunk
+from chat_analyzer_api.workers.analyzer_flow import localize_chunk
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

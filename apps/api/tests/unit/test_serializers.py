@@ -1,6 +1,6 @@
 import pandas as pd
 
-from chat_analyzer_api.presentation.serializers import dataframe_to_records
+from chat_analyzer_api.core.serializers import dataframe_to_records
 
 
 def test_dataframe_to_records_includes_datetime_iso():

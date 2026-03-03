@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chat_analyzer_api.presentation.dashboard.builder import build_dashboard_payload
+from chat_analyzer_api.services.dashboard.builder import build_dashboard_payload
 
 
 def test_dashboard_builder_returns_declarative_contract():

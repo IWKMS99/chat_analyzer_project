@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from chat_analyzer_api.api.dependencies import configure_runtime_dependencies, get_repo, get_storage
 from chat_analyzer_api.api.router import router as analyses_router
 from chat_analyzer_api.core.config import Settings
 from chat_analyzer_api.db.repo import PHASE_DONE, STATUS_DONE
@@ -92,10 +93,7 @@ def _build_test_client(tmp_path: Path, max_upload_bytes: int = 1024 * 1024, comp
     runner = FakeRunner(repo, storage) if complete_immediately else FakeRunnerNoop()
 
     app = FastAPI()
-    app.state.settings = settings
-    app.state.analysis_repo = repo
-    app.state.storage = storage
-    app.state.task_runner = runner
+    configure_runtime_dependencies(app, settings=settings, repo=repo, storage=storage, task_runner=runner)
     app.include_router(analyses_router, prefix="/api")
     return TestClient(app)
 
@@ -195,7 +193,7 @@ def test_timezone_invalid_name_falls_back_to_utc(tmp_path: Path):
         files={"file": ("result.json", b'{"messages": [{"type":"message","id":1,"date":"2026-01-01T00:00:00","from":"A","text":"hi"}]}', "application/json")},
     )
     analysis_id = created.json()["analysis_id"]
-    row = client.app.state.analysis_repo.get_analysis(analysis_id)
+    row = client.app.dependency_overrides[get_repo]().get_analysis(analysis_id)
     assert row is not None
     assert row["timezone"] == "UTC"
 
@@ -218,9 +216,9 @@ def test_dashboard_returns_500_for_corrupted_payload(tmp_path: Path):
         files={"file": ("result.json", b'{"messages": [{"type":"message","id":1,"date":"2026-01-01T00:00:00","from":"A","text":"hi"}]}', "application/json")},
     )
     analysis_id = created.json()["analysis_id"]
-    row = client.app.state.analysis_repo.get_analysis(analysis_id)
+    row = client.app.dependency_overrides[get_repo]().get_analysis(analysis_id)
     assert row is not None
-    client.app.state.storage.write_bytes(row["result_path"], b'["not-an-object"]')
+    client.app.dependency_overrides[get_storage]().write_bytes(row["result_path"], b'["not-an-object"]')
 
     response = client.get(f"/api/analyses/{analysis_id}/dashboard")
     assert response.status_code == 500
@@ -244,6 +242,6 @@ def test_empty_timezone_falls_back_to_utc(tmp_path: Path):
         files={"file": ("result.json", b'{"messages": [{"type":"message","id":1,"date":"2026-01-01T00:00:00","from":"A","text":"hi"}]}', "application/json")},
     )
     analysis_id = created.json()["analysis_id"]
-    row = client.app.state.analysis_repo.get_analysis(analysis_id)
+    row = client.app.dependency_overrides[get_repo]().get_analysis(analysis_id)
     assert row is not None
     assert row["timezone"] == "UTC"
