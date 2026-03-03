@@ -1,51 +1,76 @@
-# Chat Analyzer Project
+# Chat Analyzer V2 (Utility-First)
 
-Stream-first анализатор Telegram JSON экспортов.
+Web-only self-hosted utility for Telegram `result.json` analysis.
 
-## Что изменено
-- Потоковая загрузка через `iter_chat_messages` / `iter_chat_chunks`.
-- Инкрементальные агрегаторы для модулей анализа.
-- Визуализация на Plotly (`HTML` + опциональный `PNG` через `kaleido`).
-- NLP на `spaCy` (RU/EN) с sentiment baseline.
-- Шаблонные отчеты `Jinja2`, основной формат `HTML`.
-- Доп. аналитика: reactions, social graph, edited/deleted.
+## What Changed in V2
 
-## Установка
+- Removed Telegram Mini App and bot flow
+- Removed MinIO/Caddy/ngrok from default stack
+- Hard break to new API: `/api/v2/*`
+- Async analysis is preserved (`POST` + status polling)
+- Frontend is fully declarative: backend returns dashboard schema (`tabs/widgets/datasets`)
+
+## Quick Start
+
+1. Copy env:
+
 ```bash
-pip install -r requirements.txt
-python -m spacy download ru_core_news_sm
-python -m spacy download en_core_web_sm
+cp .env.example .env
 ```
 
-## Быстрый старт
+2. Start:
+
 ```bash
-python main.py data/result.json
+docker compose up --build
 ```
 
-## CLI
+3. Open app:
+
+- Frontend: `http://localhost:8080`
+- API docs: `http://localhost:8000/docs`
+
+Upload Telegram Desktop export `result.json` and wait until analysis status becomes `done`.
+
+## API V2
+
+- `POST /api/v2/analyses` - create analysis from uploaded file
+- `GET /api/v2/analyses` - list recent analyses
+- `GET /api/v2/analyses/{analysis_id}/status` - get status/progress
+- `GET /api/v2/analyses/{analysis_id}/dashboard` - get declarative dashboard payload
+- `DELETE /api/v2/analyses/{analysis_id}` - delete analysis and stored files
+- `GET /api/v2/healthz` - service health
+
+## Storage and Retention
+
+- Uploads/results are stored on local filesystem under `backend_data/`
+- SQLite metadata database path is controlled by `SQLITE_PATH`
+- Expired analyses are cleaned automatically using `TASK_TTL_SECONDS`
+
+## Contributor Workflow
+
+To add new metrics/charts, update Python analysis + dashboard builder.
+No React module-specific chart code is required.
+
+## Security Operations
+
+### Secret Scanning
+
+- CI runs `gitleaks` on every push and pull request via `.github/workflows/security-secret-scan.yml`
+- Local pre-commit scanning is configured in `.pre-commit-config.yaml`
+
+Setup:
+
 ```bash
-python main.py INPUT_JSON \
-  --output-dir output \
-  --report-format html \
-  --profile full \
-  --chunk-size 50000
+pip install pre-commit
+pre-commit install
 ```
 
-### Основные параметры
-- `--timezone`: по умолчанию системная таймзона (`tzlocal`).
-- `--report-format`: `html|json|md|all` (default `html`).
-- `--modules`: выбор модулей (`summary activity temporal user message dialog nlp anomaly social`).
-- `--chunk-size`: размер чанка для stream-пайплайна.
-- `--max-workers`: процессы для NLP `spaCy.pipe`.
-- `--disable-interactive`: не сохранять HTML-графики.
-- `--skip-plots`: не строить графики.
+### Secret Rotation and Git History Purge Checklist
 
-## Публичные API
-- `iter_chat_messages(file_path, normalize=True)`
-- `iter_chat_chunks(file_path, chunk_size=50000)`
-- `load_and_process_chat_data(...)` — deprecated wrapper.
+If any secret appears in repository history or generated artifacts:
 
-## Выходные артефакты
-- `output/report.html` (или `report.md/report.json`).
-- `output/charts/*.html` и `output/charts/*.png`.
-- `output/social_graph.html` (если есть данные для графа).
+1. Revoke and rotate exposed credentials first (bot tokens, ngrok, MinIO keys, API keys).
+2. Remove leaked files/content from the current branch.
+3. Rewrite history with `git filter-repo` (or BFG) to purge leaked blobs.
+4. Force-push rewritten branches and notify collaborators to re-clone.
+5. Confirm with `gitleaks git --redact` that no secrets remain in history.
