@@ -5,7 +5,7 @@ type ApiErrorPayload = {
 
 const rawApiBaseUrl =
   (globalThis as { __CHAT_ANALYZER_API_BASE_URL__?: string }).__CHAT_ANALYZER_API_BASE_URL__ ??
-  "http://localhost:8000/api";
+  "/api";
 
 const normalizedApiBaseUrl = rawApiBaseUrl.replace(/\/$/, "");
 
