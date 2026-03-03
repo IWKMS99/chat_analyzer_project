@@ -6,7 +6,7 @@ Monorepo layout:
 - `apps/web`: React + Vite frontend
 - `packages/analyzer-core`: shared Python analysis engine
 - `packages/api-contracts`: shared TypeScript API contracts
-- `infra/docker-compose.yml`: local orchestration
+- `docker-compose.yml`: local orchestration entrypoint (symlink to `infra/docker-compose.yml`)
 
 ## Quick Start
 
@@ -44,7 +44,7 @@ corepack pnpm --filter @chat-analyzer/api-contracts run generate
 5. Run stack:
 
 ```bash
-docker compose -f infra/docker-compose.yml up --build
+docker compose up --build
 ```
 
 - Frontend: `http://localhost:8080`
