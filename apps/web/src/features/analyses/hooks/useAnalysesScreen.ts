@@ -9,9 +9,14 @@ import {
   useListAnalyses,
 } from "@chat-analyzer/api-contracts";
 
-export function useAnalysesScreen() {
+interface UseAnalysesScreenOptions {
+  analysisId: string | null;
+  setAnalysisId: (analysisId: string | null) => void;
+}
+
+export function useAnalysesScreen({ analysisId, setAnalysisId }: UseAnalysesScreenOptions) {
   const timezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
-  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const listQuery = useListAnalyses({ limit: 20 });
@@ -31,7 +36,11 @@ export function useAnalysesScreen() {
         if (analysisId === variables.analysisId) {
           setAnalysisId(null);
         }
+        setPendingDeleteId(null);
         await queryClient.invalidateQueries({ queryKey: getListAnalysesQueryKey() });
+      },
+      onError: () => {
+        setPendingDeleteId(null);
       },
     },
   });
@@ -61,7 +70,10 @@ export function useAnalysesScreen() {
       },
     });
 
-  const removeAnalysis = (id: string) => deleteMutation.mutate({ analysisId: id });
+  const removeAnalysis = (id: string) => {
+    setPendingDeleteId(id);
+    deleteMutation.mutate({ analysisId: id });
+  };
 
   const error = createMutation.error || deleteMutation.error || statusQuery.error || dashboardQuery.error || listQuery.error;
 
@@ -75,6 +87,7 @@ export function useAnalysesScreen() {
     dashboardQuery,
     startAnalysis,
     removeAnalysis,
+    pendingDeleteId,
     error,
   };
 }

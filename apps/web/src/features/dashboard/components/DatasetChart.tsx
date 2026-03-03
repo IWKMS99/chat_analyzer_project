@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import type { DashboardWidget } from "@chat-analyzer/api-contracts";
+import { useI18n } from "../../i18n/useI18n";
 import { buildChartModel } from "../lib/transformers";
 
 interface Props {
@@ -21,17 +22,19 @@ interface Props {
 }
 
 export function DatasetChart({ rows, chartWidget }: Props) {
+  const { t } = useI18n();
   const model = useMemo(() => buildChartModel(rows, chartWidget), [rows, chartWidget]);
 
   if (!model) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-        Chart is unavailable for this dataset type.
+        {t("dashboard.tile.noChart")}
       </div>
     );
   }
 
   const colors = ["#1f7a8c", "#0f766e", "#2563eb", "#ea580c", "#dc2626", "#7c3aed"];
+  const xIsNumeric = model.data.every((row) => typeof row[model.xKey] === "number");
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-2">
@@ -40,7 +43,12 @@ export function DatasetChart({ rows, chartWidget }: Props) {
           {model.kind === "bar" ? (
             <BarChart data={model.data} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey={model.xKey} tick={{ fontSize: 11, fill: "#475569" }} />
+              <XAxis
+                dataKey={model.xKey}
+                type={xIsNumeric ? "number" : "category"}
+                domain={xIsNumeric ? ["dataMin", "dataMax"] : undefined}
+                tick={{ fontSize: 11, fill: "#475569" }}
+              />
               <YAxis tick={{ fontSize: 11, fill: "#475569" }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: "12px" }} />
@@ -51,7 +59,12 @@ export function DatasetChart({ rows, chartWidget }: Props) {
           ) : (
             <LineChart data={model.data} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey={model.xKey} tick={{ fontSize: 11, fill: "#475569" }} />
+              <XAxis
+                dataKey={model.xKey}
+                type={xIsNumeric ? "number" : "category"}
+                domain={xIsNumeric ? ["dataMin", "dataMax"] : undefined}
+                tick={{ fontSize: 11, fill: "#475569" }}
+              />
               <YAxis tick={{ fontSize: 11, fill: "#475569" }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: "12px" }} />
