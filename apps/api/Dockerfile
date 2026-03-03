@@ -9,6 +9,9 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
+RUN /app/.venv/bin/python -m ensurepip --upgrade && \
+    /app/.venv/bin/python -m spacy download ru_core_news_sm && \
+    /app/.venv/bin/python -m spacy download en_core_web_sm
 
 COPY apps ./apps
 COPY packages ./packages
