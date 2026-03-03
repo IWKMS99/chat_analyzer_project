@@ -20,6 +20,9 @@ services:
 
   web:
     image: ${WEB_IMAGE:-ghcr.io/iwkms99/chat-analyzer-web:latest}
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-100m}
     ports:
       - "8080:80"
     depends_on:
