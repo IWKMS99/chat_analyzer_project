@@ -690,13 +690,14 @@ def _chart_nlp_emoji(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
 
 
 def _chart_social_reactions_received(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
+    y_field = "reactions_count" if rows and "reactions_count" in rows[0] else "count"
     return _safe_chart(
         dataset_name,
         rows,
         mark="bar",
         x_field="from",
         x_type="nominal",
-        y_field="count",
+        y_field=y_field,
         semantic_kind="categorical_breakdown",
         chart_kind="bar",
     ) or _fallback_chart(dataset_name, rows) or _chart(
@@ -704,19 +705,19 @@ def _chart_social_reactions_received(dataset_name: str, rows: DatasetRows) -> Ch
         "bar",
         "from",
         "nominal",
-        "count",
+        y_field,
         semantic_kind="categorical_breakdown",
         chart_kind="bar",
     )
 
 
-def _chart_social_edited_deleted(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
+def _chart_social_edited(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
     return _safe_wide_bar(
         dataset_name,
         rows,
         x_field="from",
         x_type="nominal",
-        metrics=["edited_ratio", "deleted_ratio"],
+        metrics=["edited_ratio"],
         semantic_kind="categorical_breakdown",
     ) or _fallback_chart(dataset_name, rows) or _chart(
         dataset_name,
@@ -839,7 +840,7 @@ _REGISTRY: dict[tuple[str, str], Callable[[str, DatasetRows], ChartDefinition | 
     ("dialog", "hour_median"): _chart_dialog_hour_median,
     ("social", "reactions_received"): _chart_social_reactions_received,
     ("social", "reply_edges"): _chart_social_reply_edges,
-    ("social", "edited_deleted"): _chart_social_edited_deleted,
+    ("social", "edited"): _chart_social_edited,
     ("nlp", "keywords"): _chart_nlp_keywords,
     ("nlp", "vocabulary"): _chart_nlp_vocabulary,
     ("nlp", "emoji"): _chart_nlp_emoji,

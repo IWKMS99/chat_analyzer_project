@@ -100,9 +100,9 @@ def test_dashboard_builder_uses_non_fallback_semantic_kind_for_explicit_registry
             },
             "social": {
                 "data": {
-                    "reactions_received": [{"from": "Alice", "count": 3}],
+                    "reactions_received": [{"from": "Alice", "reactions_count": 3}],
                     "reply_edges": [{"from": "Alice", "to": "Bob", "count": 2}],
-                    "edited_deleted": [{"from": "Alice", "edited_ratio": 0.1, "deleted_ratio": 0.0}],
+                    "edited": [{"from": "Alice", "edited_ratio": 0.1}],
                 },
                 "warnings": [],
             },
@@ -127,7 +127,7 @@ def test_dashboard_builder_uses_non_fallback_semantic_kind_for_explicit_registry
         "nlp_vocabulary_ds": "categorical_breakdown",
         "nlp_emoji_ds": "categorical_breakdown",
         "social_reactions_received_ds": "categorical_breakdown",
-        "social_edited_deleted_ds": "categorical_breakdown",
+        "social_edited_ds": "categorical_breakdown",
         "anomaly_daily_ds": "time_series",
     }
 
