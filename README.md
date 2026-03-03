@@ -48,7 +48,9 @@ docker compose up --build
 ```
 
 - Frontend: `http://localhost:8080`
-- API docs: `http://localhost:8000/docs`
+- API base path (via web reverse proxy): `http://localhost:8080/api`
+- API healthcheck: `http://localhost:8080/api/healthz`
+- API docs (via web reverse proxy): `http://localhost:8080/docs`
 
 ## Developer Scripts
 
