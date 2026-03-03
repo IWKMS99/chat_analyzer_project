@@ -49,7 +49,7 @@ output/
 codebase.txt
 1.py
 
-lib/
+/lib/
 
 # Frontend build artifacts
 node_modules/
