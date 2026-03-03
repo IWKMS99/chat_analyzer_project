@@ -4,11 +4,10 @@ from pathlib import Path
 import pytest
 
 from chat_analyzer.data_loader import (
-    EmptyDataError,
     InvalidSchemaError,
     iter_chat_chunks,
+    iter_chat_chunks_from_fileobj,
     iter_chat_messages,
-    load_and_process_chat_data,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -39,17 +38,12 @@ def test_iter_chat_chunks_schema_and_types():
     assert str(df["text_length"].dtype) == "int32"
 
 
-def test_load_and_process_chat_data_deprecated_wrapper():
-    df = load_and_process_chat_data(str(FIXTURES / "chat_small.json"), chunk_size=2)
-    assert not df.empty
+def test_iter_chat_chunks_empty_messages_returns_no_chunks():
+    chunks = list(iter_chat_chunks(str(FIXTURES / "chat_empty_messages.json")))
+    assert chunks == []
 
 
-def test_load_and_process_chat_data_empty_messages():
-    with pytest.raises(EmptyDataError):
-        load_and_process_chat_data(str(FIXTURES / "chat_empty_messages.json"))
-
-
-def test_load_and_process_chat_data_invalid_schema():
+def test_iter_chat_chunks_invalid_schema():
     with pytest.raises(InvalidSchemaError):
         list(iter_chat_chunks(str(FIXTURES / "chat_invalid_schema.json")))
 
@@ -73,3 +67,11 @@ def test_deleted_message_without_author_is_kept(tmp_path: Path):
     assert len(records) == 1
     assert records[0].sender == "UnknownUser"
     assert records[0].is_deleted is True
+
+
+def test_iter_chat_chunks_from_fileobj():
+    source = FIXTURES / "chat_small.json"
+    with source.open("rb") as f:
+        chunks = list(iter_chat_chunks_from_fileobj(f, chunk_size=2))
+    assert chunks
+    assert not chunks[0].empty
