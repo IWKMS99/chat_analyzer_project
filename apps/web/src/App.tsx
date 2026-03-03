@@ -67,44 +67,6 @@ function LanguageSwitch() {
   );
 }
 
-function FlowGuide() {
-  const { t } = useI18n();
-
-  const steps = [
-    {
-      id: "upload",
-      title: t("flow.step.upload.title"),
-      text: t("flow.step.upload.body"),
-    },
-    {
-      id: "monitor",
-      title: t("flow.step.monitor.title"),
-      text: t("flow.step.monitor.body"),
-    },
-    {
-      id: "explore",
-      title: t("flow.step.explore.title"),
-      text: t("flow.step.explore.body"),
-    },
-  ];
-
-  return (
-    <section className="surface p-4">
-      <p className="text-sm font-semibold text-ink">{t("flow.title")}</p>
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
-        {steps.map((step, index) => (
-          <article key={step.id} className="rounded-xl border border-slate-200/70 bg-white/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {index + 1}. {step.title}
-            </p>
-            <p className="mt-1 text-sm text-slate-700">{step.text}</p>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 interface AppContentProps {
   urlState: ReturnType<typeof useUrlState>;
 }
@@ -168,7 +130,6 @@ function AppContent({ urlState }: AppContentProps) {
         </header>
 
         <HeroPanel />
-        <FlowGuide />
 
         <section className="surface p-4">
           <FileUpload onSubmit={startAnalysis} disabled={createMutation.isPending} />
