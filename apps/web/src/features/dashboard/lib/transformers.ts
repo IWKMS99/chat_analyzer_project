@@ -1,5 +1,5 @@
 import type { DashboardResponse, DashboardWidget } from "@chat-analyzer/api-contracts";
-import type { ChartModel, DatasetCardModel, PreviewKpi, SummaryKpi } from "../model";
+import type { ChartModel, DatasetCardModel, ModuleKpi, PreviewKpi, SummaryKpi } from "../model";
 import { formatMaybeDate, humanize, safeString } from "./formatters";
 
 const DAY_OF_WEEK_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -86,6 +86,77 @@ function buildPreviewKpis(rows: Array<Record<string, unknown>>, columns: string[
   }));
 }
 
+function topSeriesByTotal(rows: Array<Record<string, unknown>>, keys: string[]): string[] {
+  const totals = new Map<string, number>();
+  keys.forEach((key) => totals.set(key, 0));
+
+  rows.forEach((row) => {
+    keys.forEach((key) => {
+      const numeric = parseNumeric(row[key]);
+      if (numeric === null) {
+        return;
+      }
+      totals.set(key, (totals.get(key) ?? 0) + numeric);
+    });
+  });
+
+  return Array.from(totals.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([key]) => key);
+}
+
+function normalizeRowsFromFold(
+  rows: Array<Record<string, unknown>>,
+  chartWidget?: DashboardWidget,
+): Array<Record<string, unknown>> {
+  const transforms = chartWidget?.vega_lite_spec?.transform;
+  if (!Array.isArray(transforms) || transforms.length === 0) {
+    return rows;
+  }
+
+  const foldTransform = transforms.find((item) => item && typeof item === "object" && Array.isArray((item as { fold?: unknown[] }).fold)) as
+    | { fold: unknown[]; as?: unknown[] }
+    | undefined;
+  if (!foldTransform) {
+    return rows;
+  }
+
+  const foldFields = foldTransform.fold.filter((item): item is string => typeof item === "string" && item.trim() !== "");
+  if (!foldFields.length) {
+    return rows;
+  }
+
+  const xField = chartWidget?.chart_config?.x;
+  if (!xField) {
+    return rows;
+  }
+
+  const asValues = Array.isArray(foldTransform.as) ? foldTransform.as : [];
+  const seriesField = typeof asValues[0] === "string" && asValues[0].trim() !== "" ? asValues[0] : "series";
+  const valueField = typeof asValues[1] === "string" && asValues[1].trim() !== "" ? asValues[1] : "value";
+
+  const longRows: Array<Record<string, unknown>> = [];
+  rows.forEach((row) => {
+    if (!(xField in row)) {
+      return;
+    }
+    const xValue = row[xField];
+    foldFields.forEach((column) => {
+      const numeric = parseNumeric(row[column]);
+      if (numeric === null) {
+        return;
+      }
+      longRows.push({
+        [xField]: xValue,
+        [seriesField]: column,
+        [valueField]: numeric,
+      });
+    });
+  });
+
+  return longRows.length > 0 ? longRows : rows;
+}
+
 function xSortValue(xField: string, value: XValue): number | null {
   if (xField === "day_of_week" && typeof value === "string") {
     const rank = DAY_OF_WEEK_ORDER.indexOf(value);
@@ -148,12 +219,44 @@ export function summaryKpis(dashboard: DashboardResponse): SummaryKpi[] {
   });
 }
 
+export function moduleKpis(dashboard: DashboardResponse): Record<string, ModuleKpi[]> {
+  const grouped: Record<string, ModuleKpi[]> = {};
+
+  for (const widget of dashboard.widgets ?? []) {
+    if (widget.type !== "kpi" || widget.tab_id === "overview") {
+      continue;
+    }
+
+    const tabId = widget.tab_id;
+    if (!grouped[tabId]) {
+      grouped[tabId] = [];
+    }
+
+    grouped[tabId].push({
+      id: widget.id,
+      tabId,
+      title: widget.title,
+      value: widget.format === "datetime" ? formatMaybeDate(widget.value) : safeString(widget.value),
+      format: widget.format ?? undefined,
+      severity: widget.severity ?? undefined,
+      priority: widget.priority ?? 100,
+    });
+  }
+
+  Object.keys(grouped).forEach((tabId) => {
+    grouped[tabId].sort((a, b) => a.priority - b.priority || a.title.localeCompare(b.title));
+  });
+
+  return grouped;
+}
+
 export function buildChartModel(rows: Array<Record<string, unknown>>, chartWidget?: DashboardWidget): ChartModel | null {
   if (!rows.length) {
     return null;
   }
 
-  const first = rows[0] ?? {};
+  const normalizedRows = normalizeRowsFromFold(rows, chartWidget);
+  const first = normalizedRows[0] ?? {};
   const keys = Object.keys(first);
   if (!keys.length) {
     return null;
@@ -162,13 +265,13 @@ export function buildChartModel(rows: Array<Record<string, unknown>>, chartWidge
   const xField =
     chartWidget?.chart_config?.x && keys.includes(chartWidget.chart_config.x)
       ? chartWidget.chart_config.x
-      : keys.find((key) => rows.some((row) => parseNumeric(row[key]) === null)) ?? keys[0];
+      : keys.find((key) => normalizedRows.some((row) => parseNumeric(row[key]) === null)) ?? keys[0];
 
   const kind = chartWidget?.chart_config?.kind === "bar" || chartWidget?.chart_config?.kind === "histogram" ? "bar" : "line";
   const requestedY = chartWidget?.chart_config?.y;
   const requestedSeries = chartWidget?.chart_config?.series;
 
-  const numericKeys = keys.filter((key) => key !== xField && rows.some((row) => parseNumeric(row[key]) !== null));
+  const numericKeys = keys.filter((key) => key !== xField && normalizedRows.some((row) => parseNumeric(row[key]) !== null));
 
   if (!numericKeys.length) {
     return null;
@@ -176,15 +279,15 @@ export function buildChartModel(rows: Array<Record<string, unknown>>, chartWidge
 
   const hasLongSeries =
     Boolean(requestedSeries) &&
-    rows.some((row) => row[requestedSeries as string] !== undefined) &&
+    normalizedRows.some((row) => row[requestedSeries as string] !== undefined) &&
     Boolean(requestedY) &&
-    rows.some((row) => parseNumeric(row[requestedY as string]) !== null);
+    normalizedRows.some((row) => parseNumeric(row[requestedY as string]) !== null);
 
   if (hasLongSeries) {
     const bucket = new Map<string, Record<string, string | number | null>>();
     const seriesTotals = new Map<string, number>();
 
-    rows.forEach((row) => {
+    normalizedRows.forEach((row) => {
       const xValue = normalizeX(row[xField]);
       const xKey = `${typeof xValue}:${xValue}`;
       const seriesValue = safeString(row[requestedSeries as string]);
@@ -228,14 +331,15 @@ export function buildChartModel(rows: Array<Record<string, unknown>>, chartWidge
     };
   }
 
+  const rankedNumericKeys = topSeriesByTotal(normalizedRows, numericKeys);
   const seriesKeys =
-    requestedY && numericKeys.includes(requestedY)
+    requestedY && rankedNumericKeys.includes(requestedY)
       ? [requestedY]
-      : requestedY && !numericKeys.includes(requestedY)
-        ? numericKeys.slice(0, MAX_CHART_SERIES)
-        : numericKeys.slice(0, MAX_CHART_SERIES);
+      : requestedY && !rankedNumericKeys.includes(requestedY)
+        ? rankedNumericKeys.slice(0, MAX_CHART_SERIES)
+        : rankedNumericKeys.slice(0, MAX_CHART_SERIES);
 
-  const data = rows.map((row) => {
+  const data = normalizedRows.map((row) => {
     const record: Record<string, string | number | null> = { x: normalizeX(row[xField]) };
     seriesKeys.forEach((key) => {
       record[key] = parseNumeric(row[key]);

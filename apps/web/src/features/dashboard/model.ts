@@ -5,6 +5,16 @@ export interface SummaryKpi {
   value: string;
 }
 
+export interface ModuleKpi {
+  id: string;
+  tabId: string;
+  title: string;
+  value: string;
+  format?: string;
+  severity?: "info" | "warning" | "error";
+  priority: number;
+}
+
 export interface PreviewKpi {
   key: string;
   label: string;
