@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 import json
-import os
-import re
-import tempfile
 import uuid
 from datetime import datetime
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile, status
 
@@ -20,14 +16,12 @@ from chat_analyzer_api.core.schemas import (
 )
 from chat_analyzer_api.db.repo import AnalysisRepository, STATUS_DONE
 from chat_analyzer_api.services.task_runner import TaskRunner
+from chat_analyzer_api.services.upload_manager import managed_upload_temp_file
+from chat_analyzer_api.services.validators import normalize_timezone, validate_analysis_id
 from chat_analyzer_api.storage.base import StorageBackend
 
 
 router = APIRouter(tags=["analyses"])
-
-_ANALYSIS_ID_RE = re.compile(r"^[a-f0-9]{32}$")
-_MAX_TIMEZONE_LEN = 128
-
 
 def _get_repo(request: Request) -> AnalysisRepository:
     return request.app.state.analysis_repo
@@ -41,48 +35,6 @@ def _get_storage(request: Request) -> StorageBackend:
     return request.app.state.storage
 
 
-def _validated_analysis_id(analysis_id: str) -> str:
-    if not _ANALYSIS_ID_RE.fullmatch(analysis_id):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid analysis id format")
-    return analysis_id
-
-
-def _normalize_timezone(timezone_name: str | None) -> str:
-    candidate = (timezone_name or "UTC").strip() or "UTC"
-    if len(candidate) > _MAX_TIMEZONE_LEN:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Timezone is too long")
-    if "\x00" in candidate:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Timezone contains forbidden characters")
-
-    try:
-        ZoneInfo(candidate)
-        return candidate
-    except (ZoneInfoNotFoundError, ValueError):
-        return "UTC"
-
-
-async def _persist_upload_to_temp(upload_file: UploadFile, max_size_bytes: int) -> tuple[str, int]:
-    current_size = 0
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
-        file_path = tmp.name
-        while True:
-            chunk = await upload_file.read(1024 * 1024)
-            if not chunk:
-                break
-            current_size += len(chunk)
-            if current_size > max_size_bytes:
-                tmp.close()
-                os.remove(file_path)
-                raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="File exceeds upload limit")
-            tmp.write(chunk)
-
-    if current_size == 0:
-        os.remove(file_path)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty")
-
-    return file_path, current_size
-
-
 @router.post("/analyses", response_model=AnalysisCreatedResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_analysis(
     request: Request,
@@ -90,17 +42,15 @@ async def create_analysis(
     timezone: str = Form("UTC"),
 ) -> AnalysisCreatedResponse:
     settings = request.app.state.settings
-    temp_upload_path = None
     analysis_id = uuid.uuid4().hex
     upload_path = f"uploads/{analysis_id}.json"
 
-    try:
-        temp_upload_path, _ = await _persist_upload_to_temp(file, settings.max_upload_bytes)
+    async with managed_upload_temp_file(file, settings.max_upload_bytes) as (temp_upload_path, _):
         _get_storage(request).copy_file(upload_path, temp_upload_path)
 
         created = _get_repo(request).create_analysis(
             analysis_id=analysis_id,
-            timezone_name=_normalize_timezone(timezone),
+            timezone_name=normalize_timezone(timezone),
             upload_path=upload_path,
             ttl_seconds=settings.task_ttl_seconds,
         )
@@ -110,9 +60,6 @@ async def create_analysis(
             status=created["status"],
             created_at=datetime.fromisoformat(created["created_at"]),
         )
-    finally:
-        if temp_upload_path and os.path.exists(temp_upload_path):
-            os.remove(temp_upload_path)
 
 
 @router.get("/analyses", response_model=AnalysisListResponse)
@@ -135,7 +82,7 @@ def list_analyses(request: Request, limit: int = Query(20, ge=1, le=200)) -> Ana
 
 @router.get("/analyses/{analysis_id}/status", response_model=AnalysisStatusResponse)
 def get_analysis_status(analysis_id: str, request: Request) -> AnalysisStatusResponse:
-    safe_analysis_id = _validated_analysis_id(analysis_id)
+    safe_analysis_id = validate_analysis_id(analysis_id)
     row = _get_repo(request).get_analysis(safe_analysis_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
@@ -154,7 +101,7 @@ def get_analysis_status(analysis_id: str, request: Request) -> AnalysisStatusRes
 
 @router.get("/analyses/{analysis_id}/dashboard", response_model=DashboardResponse)
 def get_analysis_dashboard(analysis_id: str, request: Request) -> DashboardResponse:
-    safe_analysis_id = _validated_analysis_id(analysis_id)
+    safe_analysis_id = validate_analysis_id(analysis_id)
     row = _get_repo(request).get_analysis(safe_analysis_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
@@ -179,7 +126,7 @@ def get_analysis_dashboard(analysis_id: str, request: Request) -> DashboardRespo
 
 @router.delete("/analyses/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_analysis(analysis_id: str, request: Request) -> Response:
-    safe_analysis_id = _validated_analysis_id(analysis_id)
+    safe_analysis_id = validate_analysis_id(analysis_id)
     row = _get_repo(request).get_analysis(safe_analysis_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
