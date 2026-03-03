@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from chat_analyzer_api.services.task_runner import TaskRunner
+from chat_analyzer_api.orchestration.task_queue import TaskRunner
 from chat_analyzer_api.storage.file_storage import FileStorage
 
 from apps.api.tests.helpers import build_repo

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from chat_analyzer_api.services.analyzer import analyze_chat_file
+from chat_analyzer_api.orchestration.analyzer_flow import analyze_chat_file
 
 
 FIXTURE = Path(__file__).resolve().parents[4] / "packages" / "analyzer-core" / "tests" / "fixtures" / "chat_small.json"

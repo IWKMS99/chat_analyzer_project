@@ -15,9 +15,9 @@ from chat_analyzer_api.core.schemas import (
     HealthResponse,
 )
 from chat_analyzer_api.db.repo import AnalysisRepository, STATUS_DONE
-from chat_analyzer_api.services.task_runner import TaskRunner
-from chat_analyzer_api.services.upload_manager import managed_upload_temp_file
-from chat_analyzer_api.services.validators import normalize_timezone, validate_analysis_id
+from chat_analyzer_api.orchestration.task_queue import TaskRunner
+from chat_analyzer_api.utils.uploads import managed_upload_temp_file
+from chat_analyzer_api.utils.validators import normalize_timezone, validate_analysis_id
 from chat_analyzer_api.storage.base import StorageBackend
 
 

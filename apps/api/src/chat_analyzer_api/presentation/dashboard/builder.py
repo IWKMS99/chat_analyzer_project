@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from chat_analyzer_api.services.chart_registry import (
+from chat_analyzer_api.presentation.dashboard.charts import (
     build_chart_definition,
     infer_dataset_meta,
     infer_table_config,

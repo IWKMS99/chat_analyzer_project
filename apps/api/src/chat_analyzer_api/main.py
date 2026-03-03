@@ -12,7 +12,7 @@ from chat_analyzer_api.db.connection import SQLiteConnectionFactory
 from chat_analyzer_api.db.repo import AnalysisRepository
 from chat_analyzer_api.middleware.rate_limit import InMemoryRateLimiter, RateLimitMiddleware
 from chat_analyzer_api.middleware.request_logging import RequestLoggingMiddleware
-from chat_analyzer_api.services.task_runner import TaskRunner
+from chat_analyzer_api.orchestration.task_queue import TaskRunner
 from chat_analyzer_api.storage.file_storage import FileStorage
 
 

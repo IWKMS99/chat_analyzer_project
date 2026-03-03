@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chat_analyzer_api.services.chart_registry import build_chart_definition
+from chat_analyzer_api.presentation.dashboard.charts import build_chart_definition
 
 
 def test_activity_hourly_uses_fold_and_non_identity_axes():

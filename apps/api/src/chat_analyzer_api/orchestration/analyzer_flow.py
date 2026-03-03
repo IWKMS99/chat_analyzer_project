@@ -20,7 +20,7 @@ from chat_analyzer_core.analysis.aggregators import (
 )
 from chat_analyzer_core.data_loader import EmptyDataError, iter_chat_chunks
 
-from chat_analyzer_api.services.serializers import dataframe_to_records
+from chat_analyzer_api.presentation.serializers import dataframe_to_records
 
 ProgressHook = Callable[[str, int, int | None], None]
 
