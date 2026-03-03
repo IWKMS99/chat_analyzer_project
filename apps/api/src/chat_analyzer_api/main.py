@@ -6,19 +6,20 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from chat_analyzer_api.api.dependencies import clear_runtime_dependencies, configure_runtime_dependencies
 from chat_analyzer_api.api.router import router as analyses_router
-from chat_analyzer_api.core.config import get_settings
+from chat_analyzer_api.core.config import get_settings as load_settings
 from chat_analyzer_api.db.connection import SQLiteConnectionFactory
 from chat_analyzer_api.db.repo import AnalysisRepository
 from chat_analyzer_api.middleware.rate_limit import InMemoryRateLimiter, RateLimitMiddleware
 from chat_analyzer_api.middleware.request_logging import RequestLoggingMiddleware
-from chat_analyzer_api.orchestration.task_queue import TaskRunner
 from chat_analyzer_api.storage.file_storage import FileStorage
+from chat_analyzer_api.workers.task_queue import TaskRunner
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    settings = get_settings()
+    settings = load_settings()
 
     repo = AnalysisRepository(SQLiteConnectionFactory(settings.sqlite_path))
     repo.mark_running_as_failed()
@@ -31,19 +32,18 @@ async def lifespan(app: FastAPI):
         workers=settings.task_workers,
         cleanup_interval_seconds=settings.cleanup_interval_seconds,
     )
+
+    configure_runtime_dependencies(app, settings=settings, repo=repo, storage=storage, task_runner=runner)
     await runner.start()
 
-    app.state.settings = settings
-    app.state.analysis_repo = repo
-    app.state.storage = storage
-    app.state.task_runner = runner
-
-    yield
-
-    await runner.stop()
+    try:
+        yield
+    finally:
+        clear_runtime_dependencies(app)
+        await runner.stop()
 
 
-settings = get_settings()
+settings = load_settings()
 app = FastAPI(title=settings.app_name, version=settings.app_version, debug=settings.debug, lifespan=lifespan)
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
