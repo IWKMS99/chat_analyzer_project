@@ -19,15 +19,16 @@ def test_anomaly_modes_return_metrics_streaming():
     assert result["metrics"]["mode"] == "both"
 
 
-def test_social_aggregator_has_edited_deleted_columns():
+def test_social_aggregator_has_edited_columns():
     sg = SocialAggregator()
     for chunk in iter_chat_chunks(str(FIXTURES / "chat_small.json"), chunk_size=3):
         chunk = localize_chunk(chunk, "UTC")
         sg.update(chunk)
     data = sg.result()
     assert "reactions_received" in data
-    assert "edited_deleted" in data
-    assert {"edited_ratio", "deleted_ratio"}.issubset(data["edited_deleted"].columns)
+    assert "edited" in data
+    assert {"edited_ratio", "edited", "total"}.issubset(data["edited"].columns)
+    assert "deleted_ratio" not in data["edited"].columns
 
 
 def test_dialog_aggregator_prefers_reply_to_message_id():

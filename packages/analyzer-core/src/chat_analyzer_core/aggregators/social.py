@@ -11,7 +11,6 @@ class SocialAggregator(BaseAggregator):
     def __init__(self):
         self.reactions_received = Counter()
         self.edited_by_user = Counter()
-        self.deleted_by_user = Counter()
         self.total_by_user = Counter()
         self.reply_edges = Counter()
         self.prev_sender = None
@@ -22,7 +21,7 @@ class SocialAggregator(BaseAggregator):
         if chunk.empty:
             return
         ordered = chunk.sort_values("date")
-        for _, row in ordered[["from", "is_edited", "is_deleted", "reactions", "date"]].iterrows():
+        for _, row in ordered[["from", "is_edited", "reactions", "date"]].iterrows():
             sender = str(row["from"])
             dt = pd.Timestamp(row["date"])
 
@@ -33,7 +32,6 @@ class SocialAggregator(BaseAggregator):
 
             self.total_by_user[sender] += 1
             self.edited_by_user[sender] += int(bool(row["is_edited"]))
-            self.deleted_by_user[sender] += int(bool(row["is_deleted"]))
 
             if self.prev_sender is not None and self.prev_sender != sender:
                 self.reply_edges[(sender, self.prev_sender)] += 1
@@ -46,8 +44,12 @@ class SocialAggregator(BaseAggregator):
             self.prev_date = dt
 
     def result(self) -> Dict[str, pd.DataFrame]:
-        reaction_rows = [{"from": user, "count": int(count)} for user, count in self.reactions_received.items()]
-        reaction_df = pd.DataFrame(reaction_rows).sort_values("count", ascending=False) if reaction_rows else pd.DataFrame(columns=["from", "count"])
+        reaction_rows = [{"from": user, "reactions_count": int(count)} for user, count in self.reactions_received.items()]
+        reaction_df = (
+            pd.DataFrame(reaction_rows).sort_values("reactions_count", ascending=False)
+            if reaction_rows
+            else pd.DataFrame(columns=["from", "reactions_count"])
+        )
         reply_rows = [(a, b, c) for (a, b), c in self.reply_edges.items()]
         reply_df = (
             pd.DataFrame(reply_rows, columns=["from", "to", "count"])
@@ -58,24 +60,21 @@ class SocialAggregator(BaseAggregator):
         edited_rows = []
         for user, total in self.total_by_user.items():
             edited = self.edited_by_user.get(user, 0)
-            deleted = self.deleted_by_user.get(user, 0)
             edited_rows.append(
                 {
                     "from": user,
                     "total": total,
                     "edited": edited,
-                    "deleted": deleted,
                     "edited_ratio": edited / max(total, 1),
-                    "deleted_ratio": deleted / max(total, 1),
                 }
             )
         edited_df = (
             pd.DataFrame(edited_rows).sort_values("total", ascending=False)
             if edited_rows
-            else pd.DataFrame(columns=["from", "total", "edited", "deleted", "edited_ratio", "deleted_ratio"])
+            else pd.DataFrame(columns=["from", "total", "edited", "edited_ratio"])
         )
         return {
             "reactions_received": reaction_df,
             "reply_edges": reply_df,
-            "edited_deleted": edited_df,
+            "edited": edited_df,
         }
