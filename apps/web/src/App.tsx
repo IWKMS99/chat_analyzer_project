@@ -20,6 +20,8 @@ function App() {
     deleteMutation,
     statusQuery,
     dashboardQuery,
+    startAnalysis,
+    removeAnalysis,
     error,
   } = useAnalysesScreen();
 
@@ -29,7 +31,7 @@ function App() {
         <HeroPanel />
 
         <section className="rounded-2xl border border-white/50 bg-white/70 p-4 shadow-md backdrop-blur">
-          <FileUpload onSubmit={(file) => createMutation.mutate(file)} disabled={createMutation.isPending} />
+          <FileUpload onSubmit={startAnalysis} disabled={createMutation.isPending} />
         </section>
 
         {error && (
@@ -49,7 +51,7 @@ function App() {
             items={listQuery.data.items ?? []}
             activeAnalysisId={analysisId}
             onSelect={setAnalysisId}
-            onDelete={(id) => deleteMutation.mutate(id)}
+            onDelete={removeAnalysis}
             deleting={deleteMutation.isPending}
           />
         )}
