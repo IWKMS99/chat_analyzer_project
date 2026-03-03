@@ -9,7 +9,11 @@
     "check": "corepack pnpm run generate && cp src/index.ts /tmp/api-contracts-index.ts && cp openapi/openapi.json /tmp/api-contracts-openapi.json && corepack pnpm run generate && diff -u /tmp/api-contracts-index.ts src/index.ts && diff -u /tmp/api-contracts-openapi.json openapi/openapi.json"
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.76.0",
     "orval": "^7.16.0"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.76.0"
   },
   "exports": {
     ".": "./src/index.ts"
