@@ -16,9 +16,9 @@ from chat_analyzer_api.db.repo import (
     STATUS_RUNNING,
     AnalysisRepository,
 )
-from chat_analyzer_api.orchestration.analyzer_flow import analyze_chat_file
-from chat_analyzer_api.presentation.dashboard.builder import build_dashboard_payload
+from chat_analyzer_api.services.dashboard.builder import build_dashboard_payload
 from chat_analyzer_api.storage.base import StorageBackend
+from chat_analyzer_api.workers.analyzer_flow import analyze_chat_file
 
 _SHUTDOWN_SENTINEL = "__shutdown__"
 
