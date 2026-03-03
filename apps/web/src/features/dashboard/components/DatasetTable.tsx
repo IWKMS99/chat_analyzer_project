@@ -1,4 +1,4 @@
-import { cn } from "../../../lib-utils";
+import { cn } from "../../../lib/utils";
 import { formatMaybeDate, humanize } from "../utils";
 
 interface Props {

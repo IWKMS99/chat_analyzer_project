@@ -12,12 +12,12 @@ import {
   YAxis,
 } from "recharts";
 
-import type { ChartWidget } from "@chat-analyzer/api-contracts";
+import type { DashboardWidget } from "@chat-analyzer/api-contracts";
 import { buildChartModel } from "../utils";
 
 interface Props {
   rows: Array<Record<string, unknown>>;
-  chartWidget?: ChartWidget;
+  chartWidget?: DashboardWidget;
 }
 
 export function DatasetChart({ rows, chartWidget }: Props) {

@@ -1,7 +1,7 @@
 import { Suspense, lazy } from "react";
 
-import { FileUpload } from "./components/FileUpload";
-import { ProgressView } from "./components/ProgressView";
+import { FileUpload } from "./features/analyses/components/FileUpload";
+import { ProgressView } from "./features/analyses/components/ProgressView";
 import { AnalysesToolbar } from "./features/analyses/components/AnalysesToolbar";
 import { HeroPanel } from "./features/analyses/components/HeroPanel";
 import { useAnalysesScreen } from "./features/analyses/hooks/useAnalysesScreen";
@@ -46,7 +46,7 @@ function App() {
 
         {listQuery.data && (
           <AnalysesToolbar
-            items={listQuery.data.items}
+            items={listQuery.data.items ?? []}
             activeAnalysisId={analysisId}
             onSelect={setAnalysisId}
             onDelete={(id) => deleteMutation.mutate(id)}
