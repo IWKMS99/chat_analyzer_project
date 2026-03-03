@@ -1,63 +1,59 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
 from functools import lru_cache
 
-
-def _as_bool(value: str | None, default: bool = False) -> bool:
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _as_int(value: str | None, default: int) -> int:
-    if value is None:
-        return default
-    try:
-        return int(value)
-    except ValueError:
-        return default
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", enable_decoding=False)
 
+    app_name: str = "chat-analyzer-api"
+    app_version: str = "2.0.0"
+    debug: bool = False
+    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:8080"])
 
-def _split_csv(value: str | None) -> list[str]:
-    if not value:
-        return []
-    return [item.strip() for item in value.split(",") if item.strip()]
+    max_upload_bytes: int = 100 * 1024 * 1024
+    sqlite_path: str = "backend_data/analyses.db"
+    storage_base_dir: str = "backend_data"
 
+    task_workers: int = 1
+    task_ttl_seconds: int = 604_800
+    cleanup_interval_seconds: int = 600
 
-@dataclass(frozen=True)
-class Settings:
-    app_name: str
-    app_version: str
-    debug: bool
-    cors_origins: list[str]
+    rate_limit_requests: int = 120
+    rate_limit_window_seconds: int = 60
 
-    max_upload_bytes: int
-    sqlite_path: str
-    storage_base_dir: str
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, value: str | list[str] | None) -> list[str]:
+        if value is None:
+            return ["http://localhost:8080"]
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
-    task_workers: int
-    task_ttl_seconds: int
-    cleanup_interval_seconds: int
+    @field_validator("debug", mode="before")
+    @classmethod
+    def _parse_debug_flag(cls, value: bool | str | None) -> bool:
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return False
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
-    rate_limit_requests: int
-    rate_limit_window_seconds: int
+    @field_validator("max_upload_bytes", "task_ttl_seconds", "cleanup_interval_seconds", "rate_limit_requests", "rate_limit_window_seconds")
+    @classmethod
+    def _validate_positive_ints(cls, value: int) -> int:
+        return max(1, value)
+
+    @field_validator("task_workers")
+    @classmethod
+    def _validate_task_workers(cls, value: int) -> int:
+        return max(1, min(value, 4))
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings(
-        app_name=os.getenv("APP_NAME", "chat-analyzer-api"),
-        app_version=os.getenv("APP_VERSION", "2.0.0"),
-        debug=_as_bool(os.getenv("DEBUG"), False),
-        cors_origins=_split_csv(os.getenv("CORS_ORIGINS", "http://localhost:8080")),
-        max_upload_bytes=_as_int(os.getenv("MAX_UPLOAD_BYTES"), 100 * 1024 * 1024),
-        sqlite_path=os.getenv("SQLITE_PATH", "backend_data/analyses.db"),
-        storage_base_dir=os.getenv("STORAGE_BASE_DIR", "backend_data"),
-        task_workers=max(1, min(_as_int(os.getenv("TASK_WORKERS"), 1), 4)),
-        task_ttl_seconds=_as_int(os.getenv("TASK_TTL_SECONDS"), 604_800),
-        cleanup_interval_seconds=_as_int(os.getenv("CLEANUP_INTERVAL_SECONDS"), 600),
-        rate_limit_requests=_as_int(os.getenv("RATE_LIMIT_REQUESTS"), 120),
-        rate_limit_window_seconds=_as_int(os.getenv("RATE_LIMIT_WINDOW_SECONDS"), 60),
-    )
+    return Settings()
