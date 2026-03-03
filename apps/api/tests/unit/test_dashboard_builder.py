@@ -76,6 +76,13 @@ def test_dashboard_builder_uses_non_fallback_semantic_kind_for_explicit_registry
                 },
                 "warnings": [],
             },
+            "temporal": {
+                "data": {
+                    "avg_response_min": 3.5,
+                    "daily_df": [{"date_only": "2026-01-01", "count": 2}],
+                },
+                "warnings": [],
+            },
             "message": {
                 "data": {
                     "lengths": [{"from": "Alice", "mean": 12.0, "median": 10.0, "p95": 24.0}],
@@ -93,14 +100,17 @@ def test_dashboard_builder_uses_non_fallback_semantic_kind_for_explicit_registry
             },
             "social": {
                 "data": {
-                    "reaction_edges": [{"from": "Alice", "count": 3}],
+                    "reactions_received": [{"from": "Alice", "count": 3}],
+                    "reply_edges": [{"from": "Alice", "to": "Bob", "count": 2}],
                     "edited_deleted": [{"from": "Alice", "edited_ratio": 0.1, "deleted_ratio": 0.0}],
                 },
                 "warnings": [],
             },
             "anomaly": {
                 "data": {
+                    "daily": [{"date_only": "2026-01-01", "count": 2, "robust_score": 3.0}],
                     "anomalies": [{"date_only": "2026-01-01", "count": 2, "robust_score": 3.0}],
+                    "metrics": {"mode": "robust", "threshold": 2.0, "robust_count": 1, "zscore_count": 1},
                 },
                 "warnings": [],
             },
@@ -110,19 +120,38 @@ def test_dashboard_builder_uses_non_fallback_semantic_kind_for_explicit_registry
 
     dashboard = build_dashboard_payload("a2", result)
     expected_semantics = {
-        "user_message_counts_ds": "categorical_breakdown",
-        "user_avg_length_ds": "categorical_breakdown",
         "user_chains_ds": "categorical_breakdown",
         "message_lengths_ds": "distribution",
         "message_question_ratio_ds": "categorical_breakdown",
         "nlp_keywords_ds": "distribution",
         "nlp_vocabulary_ds": "categorical_breakdown",
         "nlp_emoji_ds": "categorical_breakdown",
-        "social_reaction_edges_ds": "categorical_breakdown",
+        "social_reactions_received_ds": "categorical_breakdown",
         "social_edited_deleted_ds": "categorical_breakdown",
-        "anomaly_anomalies_ds": "time_series",
+        "anomaly_daily_ds": "time_series",
     }
 
     for dataset_id, semantic_kind in expected_semantics.items():
         assert dashboard["dataset_meta"][dataset_id]["semantic_kind"] == semantic_kind
         assert dashboard["dataset_meta"][dataset_id]["semantic_kind"] != "fallback"
+
+    suppressed = {
+        "user_message_counts_ds",
+        "user_avg_length_ds",
+        "temporal_daily_df_ds",
+        "anomaly_anomalies_ds",
+        "social_reply_edges_ds",
+    }
+    for dataset_id in suppressed:
+        assert dataset_id not in dashboard["datasets"]
+        assert dataset_id not in dashboard["dataset_meta"]
+
+    kpi_ids = {widget["id"] for widget in dashboard["widgets"] if widget["type"] == "kpi"}
+    assert not any(widget_id.startswith("kpi_") for widget_id in kpi_ids)
+    assert {
+        "temporal_avg_response_min_kpi",
+        "anomaly_metrics_mode_kpi",
+        "anomaly_metrics_threshold_kpi",
+        "anomaly_metrics_robust_count_kpi",
+        "anomaly_metrics_zscore_count_kpi",
+    }.issubset(kpi_ids)

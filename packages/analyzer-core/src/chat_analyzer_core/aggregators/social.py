@@ -75,7 +75,7 @@ class SocialAggregator(BaseAggregator):
             else pd.DataFrame(columns=["from", "total", "edited", "deleted", "edited_ratio", "deleted_ratio"])
         )
         return {
-            "reaction_edges": reaction_df,
+            "reactions_received": reaction_df,
             "reply_edges": reply_df,
             "edited_deleted": edited_df,
         }

@@ -25,6 +25,7 @@ def test_social_aggregator_has_edited_deleted_columns():
         chunk = localize_chunk(chunk, "UTC")
         sg.update(chunk)
     data = sg.result()
+    assert "reactions_received" in data
     assert "edited_deleted" in data
     assert {"edited_ratio", "deleted_ratio"}.issubset(data["edited_deleted"].columns)
 

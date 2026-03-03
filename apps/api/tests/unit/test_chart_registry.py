@@ -87,7 +87,7 @@ def test_fallback_refuses_invalid_identity_chart():
             "categorical_breakdown",
         ),
         ("nlp", "emoji", [{"emoji": ":)", "count": 8}], "emoji", "count", "bar", "categorical_breakdown"),
-        ("social", "reaction_edges", [{"from": "Alice", "count": 7}], "from", "count", "bar", "categorical_breakdown"),
+        ("social", "reactions_received", [{"from": "Alice", "count": 7}], "from", "count", "bar", "categorical_breakdown"),
         (
             "social",
             "edited_deleted",

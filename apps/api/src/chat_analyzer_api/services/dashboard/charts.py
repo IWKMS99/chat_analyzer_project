@@ -689,7 +689,7 @@ def _chart_nlp_emoji(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
     )
 
 
-def _chart_social_reaction_edges(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
+def _chart_social_reactions_received(dataset_name: str, rows: DatasetRows) -> ChartDefinition:
     return _safe_chart(
         dataset_name,
         rows,
@@ -837,7 +837,7 @@ _REGISTRY: dict[tuple[str, str], Callable[[str, DatasetRows], ChartDefinition | 
     ("dialog", "reply_edges"): _chart_dialog_reply_edges,
     ("dialog", "pair_median"): _chart_dialog_pair_median,
     ("dialog", "hour_median"): _chart_dialog_hour_median,
-    ("social", "reaction_edges"): _chart_social_reaction_edges,
+    ("social", "reactions_received"): _chart_social_reactions_received,
     ("social", "reply_edges"): _chart_social_reply_edges,
     ("social", "edited_deleted"): _chart_social_edited_deleted,
     ("nlp", "keywords"): _chart_nlp_keywords,

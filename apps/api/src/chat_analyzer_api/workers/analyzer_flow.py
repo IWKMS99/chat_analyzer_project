@@ -225,7 +225,7 @@ def analyze_chat_file(file_path: str, timezone_name: str, progress_hook: Progres
         },
         "social": {
             "data": {
-                "reaction_edges": dataframe_to_records(social_payload.get("reaction_edges", pd.DataFrame())),
+                "reactions_received": dataframe_to_records(social_payload.get("reactions_received", pd.DataFrame())),
                 "reply_edges": dataframe_to_records(social_payload.get("reply_edges", pd.DataFrame())),
                 "edited_deleted": dataframe_to_records(social_payload.get("edited_deleted", pd.DataFrame())),
             },

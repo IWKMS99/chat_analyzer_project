@@ -9,7 +9,7 @@ import { DatasetChart } from "./DatasetChart";
 import { DatasetTable } from "./DatasetTable";
 import { KpiCard } from "./KpiCard";
 import { safeString } from "../lib/formatters";
-import { buildDatasetCards, summaryKpis } from "../lib/transformers";
+import { buildDatasetCards, moduleKpis, summaryKpis } from "../lib/transformers";
 
 interface Props {
   dashboard: DashboardResponse;
@@ -35,7 +35,8 @@ function explanationKeyForDataset(dataset: DatasetCardModel) {
   if (source.includes("sentiment")) return "dashboard.explain.sentiment" as const;
   if (source.includes("question_ratio") || source.includes("question ratio")) return "dashboard.explain.questions" as const;
   if (source.includes("length")) return "dashboard.explain.lengths" as const;
-  if (source.includes("reply_edges") || source.includes("reaction_edges")) return "dashboard.explain.edges" as const;
+  if (source.includes("reply_edges")) return "dashboard.explain.edges" as const;
+  if (source.includes("reactions_received")) return "dashboard.explain.reactionsReceived" as const;
   if (source.includes("pair_median")) return "dashboard.explain.pairMedian" as const;
   if (source.includes("response") || source.includes("interval")) return "dashboard.explain.response" as const;
   if (source.includes("sessions")) return "dashboard.explain.sessions" as const;
@@ -106,6 +107,7 @@ export function ReactDashboard({ dashboard }: Props) {
   const loadingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const kpis = useMemo(() => summaryKpis(dashboard), [dashboard]);
+  const moduleKpiByTab = useMemo(() => moduleKpis(dashboard), [dashboard]);
   const datasetCards = useMemo(() => buildDatasetCards(dashboard), [dashboard]);
   const warnings = Array.isArray(dashboard.metadata?.warnings) ? dashboard.metadata.warnings : [];
 
@@ -143,9 +145,10 @@ export function ReactDashboard({ dashboard }: Props) {
         id: tab.id,
         title: tab.title,
         cards: cardGroup.get(tab.id) ?? [],
+        kpis: moduleKpiByTab[tab.id] ?? [],
       }))
-      .filter((section) => section.cards.length > 0);
-  }, [datasetCards, tabGroups]);
+      .filter((section) => section.cards.length > 0 || section.kpis.length > 0);
+  }, [datasetCards, moduleKpiByTab, tabGroups]);
 
   useEffect(() => {
     return () => {
@@ -235,6 +238,18 @@ export function ReactDashboard({ dashboard }: Props) {
         <section key={section.id} className="space-y-3">
           <header className="px-1">
             <h3 className="text-xl font-heading text-ink">{section.title}</h3>
+            {section.kpis.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {section.kpis.map((item) => (
+                  <span
+                    key={item.id}
+                    className="rounded-full border border-[var(--color-accent-soft)] bg-[var(--color-accent-soft)]/35 px-2 py-1 text-xs font-semibold text-[var(--color-accent-deep)]"
+                  >
+                    {item.title}: {item.value}
+                  </span>
+                ))}
+              </div>
+            )}
           </header>
 
           <div className="grid auto-rows-[minmax(12rem,auto)] items-start gap-4 md:grid-cols-4 xl:grid-cols-6">
