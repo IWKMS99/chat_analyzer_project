@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
-import type { DashboardResponse, DatasetMetaRecommendedWidget } from "@chat-analyzer/api-contracts";
+import type { DashboardResponse } from "@chat-analyzer/api-contracts";
+import type { DatasetCardModel } from "../model";
 import { useI18n } from "../../i18n/useI18n";
 import { DatasetChart } from "./DatasetChart";
 import { DatasetTable } from "./DatasetTable";
@@ -19,6 +20,36 @@ interface TabGroup {
   order: number;
 }
 
+function explanationKeyForDataset(dataset: DatasetCardModel) {
+  const source = `${dataset.id} ${dataset.title} ${dataset.moduleLabel}`.toLowerCase();
+
+  if (source.includes("hourly") || source.includes("hour")) return "dashboard.explain.hourly" as const;
+  if (source.includes("daily") || source.includes("day")) return "dashboard.explain.daily" as const;
+  if (source.includes("weekday")) return "dashboard.explain.weekday" as const;
+  if (source.includes("monthly") || source.includes("month")) return "dashboard.explain.monthly" as const;
+  if (source.includes("period")) return "dashboard.explain.periods" as const;
+  if (source.includes("anomal")) return "dashboard.explain.anomaly" as const;
+  if (source.includes("emoji")) return "dashboard.explain.emoji" as const;
+  if (source.includes("keyword")) return "dashboard.explain.keywords" as const;
+  if (source.includes("sentiment")) return "dashboard.explain.sentiment" as const;
+  if (source.includes("question_ratio") || source.includes("question ratio")) return "dashboard.explain.questions" as const;
+  if (source.includes("length")) return "dashboard.explain.lengths" as const;
+  if (source.includes("reply_edges") || source.includes("reaction_edges")) return "dashboard.explain.edges" as const;
+  if (source.includes("pair_median")) return "dashboard.explain.pairMedian" as const;
+  if (source.includes("response") || source.includes("interval")) return "dashboard.explain.response" as const;
+  if (source.includes("sessions")) return "dashboard.explain.sessions" as const;
+  if (source.includes("message_counts")) return "dashboard.explain.userCounts" as const;
+  if (source.includes("avg_length")) return "dashboard.explain.userAvgLength" as const;
+  if (source.includes("chains")) return "dashboard.explain.userChains" as const;
+  if (source.includes("vocabulary")) return "dashboard.explain.vocabulary" as const;
+
+  if (dataset.semanticKind === "time_series") return "dashboard.semantic.time_series" as const;
+  if (dataset.semanticKind === "distribution") return "dashboard.semantic.distribution" as const;
+  if (dataset.semanticKind === "categorical_breakdown") return "dashboard.semantic.categorical_breakdown" as const;
+  if (dataset.semanticKind === "network_edges") return "dashboard.semantic.network_edges" as const;
+  return "dashboard.semantic.fallback" as const;
+}
+
 function DatasetSkeleton() {
   return (
     <div className="space-y-3" aria-hidden="true">
@@ -28,38 +59,6 @@ function DatasetSkeleton() {
       <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
     </div>
   );
-}
-
-function explainerKey(semanticKind: string) {
-  if (semanticKind === "time_series") {
-    return "dashboard.tile.explainer.time_series" as const;
-  }
-  if (semanticKind === "distribution") {
-    return "dashboard.tile.explainer.distribution" as const;
-  }
-  if (semanticKind === "categorical_breakdown") {
-    return "dashboard.tile.explainer.categorical_breakdown" as const;
-  }
-  if (semanticKind === "network_edges") {
-    return "dashboard.tile.explainer.network_edges" as const;
-  }
-  if (semanticKind === "fallback") {
-    return "dashboard.tile.explainer.fallback" as const;
-  }
-  return "dashboard.tile.explainer.default" as const;
-}
-
-function recommendedWidgetLabel(value: DatasetMetaRecommendedWidget | undefined | null): string {
-  if (value === "both") {
-    return "chart + table";
-  }
-  if (value === "chart") {
-    return "chart";
-  }
-  if (value === "table") {
-    return "table";
-  }
-  return "chart + table";
 }
 
 export function ReactDashboard({ dashboard }: Props) {
@@ -176,20 +175,6 @@ export function ReactDashboard({ dashboard }: Props) {
         </div>
       </section>
 
-      <section className="surface p-4">
-        <p className="text-sm font-semibold text-ink">{t("dashboard.guide.title")}</p>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <article className="rounded-xl border border-slate-200/70 bg-white/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("dashboard.guide.everyone.title")}</p>
-            <p className="mt-1 text-sm text-slate-700">{t("dashboard.guide.everyone.body")}</p>
-          </article>
-          <article className="rounded-xl border border-slate-200/70 bg-white/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("dashboard.guide.analyst.title")}</p>
-            <p className="mt-1 text-sm text-slate-700">{t("dashboard.guide.analyst.body")}</p>
-          </article>
-        </div>
-      </section>
-
       {warnings.length > 0 && (
         <section className="surface rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">{t("state.warnings")}</p>
@@ -209,8 +194,7 @@ export function ReactDashboard({ dashboard }: Props) {
             <h3 className="text-xl font-heading text-ink">{section.title}</h3>
           </header>
 
-          <LayoutGroup id={`dashboard-${section.id}`}>
-            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
               {section.cards.map((dataset) => {
                 const isExpanded = Boolean(expandedCards[dataset.id]);
                 const isTableExpanded = Boolean(expandedTable[dataset.id]);
@@ -219,9 +203,9 @@ export function ReactDashboard({ dashboard }: Props) {
 
                 return (
                   <motion.article
-                    layout
+                    layout="size"
                     key={dataset.id}
-                    className="surface-elevated overflow-hidden p-4"
+                    className="surface-elevated self-start overflow-hidden p-4"
                     transition={{ type: "spring", stiffness: 360, damping: 34, mass: 0.65 }}
                   >
                     <button
@@ -243,10 +227,6 @@ export function ReactDashboard({ dashboard }: Props) {
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">{t("dashboard.tile.columns", { count: dataset.columns.length })}</span>
-                        <span className="rounded-full bg-white px-2 py-1 text-xs text-slate-700">{t("dashboard.tile.semantic", { value: dataset.semanticKind })}</span>
-                        <span className="rounded-full bg-white px-2 py-1 text-xs text-slate-700">
-                          {t("dashboard.tile.recommended", { value: recommendedWidgetLabel(dataset.meta?.recommended_widget) })}
-                        </span>
                       </div>
 
                       {dataset.previewKpis.length > 0 && (
@@ -259,15 +239,18 @@ export function ReactDashboard({ dashboard }: Props) {
                         </div>
                       )}
 
-                      <motion.div
-                        layoutId={`dataset-accent-${dataset.id}`}
-                        className="mt-3 h-14 rounded-xl bg-[linear-gradient(110deg,rgba(217,232,255,0.75),rgba(255,255,255,0.92))]"
-                      />
-
-                      <p className="mt-2 text-xs text-slate-600">{t(explainerKey(dataset.semanticKind))}</p>
-                      <p className="mt-2 text-xs font-semibold text-[var(--color-accent-deep)]">
-                        {isExpanded ? t("dashboard.tile.close") : t("dashboard.tile.open")}
+                      <p className="mt-2 text-xs text-slate-600">
+                        {t("dashboard.tile.whatShows", { title: dataset.title, value: t(explanationKeyForDataset(dataset)) })}
                       </p>
+
+                      <div
+                        className="mt-3 flex items-center justify-between rounded-xl border border-[var(--color-accent-soft)] bg-[linear-gradient(110deg,rgba(217,232,255,0.92),rgba(255,255,255,0.98))] px-3 py-2 text-sm font-semibold text-[var(--color-accent-deep)] transition hover:border-[var(--color-accent-strong)] hover:shadow-sm"
+                      >
+                        <span>{t("dashboard.tile.open")}</span>
+                        <span aria-hidden="true" className="text-base leading-none">
+                          {isExpanded ? "−" : "+"}
+                        </span>
+                      </div>
                     </button>
 
                     <AnimatePresence initial={false}>
@@ -275,7 +258,6 @@ export function ReactDashboard({ dashboard }: Props) {
                         <motion.section
                           key={`${dataset.id}-details`}
                           id={`dataset-panel-${dataset.id}`}
-                          layout
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
@@ -283,7 +265,7 @@ export function ReactDashboard({ dashboard }: Props) {
                           className="overflow-hidden"
                         >
                           <div className="mt-4 space-y-4 border-t border-slate-200 pt-4">
-                            <motion.div layoutId={`dataset-accent-${dataset.id}`} className="h-1 rounded-full bg-[var(--color-accent-strong)]" />
+                            <div className="h-1 rounded-full bg-[var(--color-accent-strong)]" />
 
                             {isLoading ? (
                               <DatasetSkeleton />
@@ -318,7 +300,6 @@ export function ReactDashboard({ dashboard }: Props) {
                 );
               })}
             </div>
-          </LayoutGroup>
         </section>
       ))}
     </section>
