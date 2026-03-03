@@ -1,0 +1,11 @@
+{
+  "name": "chat-analyzer-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "web:dev": "pnpm --filter @chat-analyzer/web dev",
+    "web:build": "pnpm --filter @chat-analyzer/web build",
+    "web:smoke": "pnpm --filter @chat-analyzer/web test:smoke"
+  }
+}

@@ -1,9 +1,0 @@
-pandas
-spacy
-ijson
-emoji
-pytest
-fastapi
-uvicorn[standard]
-python-multipart
-httpx>=0.27,<1.0

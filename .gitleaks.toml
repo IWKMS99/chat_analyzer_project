@@ -3,6 +3,5 @@ title = "chat_analyzer_project gitleaks config"
 [allowlist]
 description = "Allow demo fixture tokens-like values"
 paths = [
-  "tests/fixtures/",
-  "assets/demo/"
+  "packages/analyzer-core/tests/fixtures/"
 ]
