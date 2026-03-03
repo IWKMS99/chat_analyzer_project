@@ -4,8 +4,11 @@ import json
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 
+from chat_analyzer_api.api.dependencies import get_repo, get_settings, get_storage, get_task_runner
+from chat_analyzer_api.api.uploads import managed_upload_temp_file
+from chat_analyzer_api.core.config import Settings
 from chat_analyzer_api.core.schemas import (
     AnalysisCreatedResponse,
     AnalysisListItem,
@@ -15,46 +18,36 @@ from chat_analyzer_api.core.schemas import (
     HealthResponse,
 )
 from chat_analyzer_api.db.repo import AnalysisRepository, STATUS_DONE
-from chat_analyzer_api.orchestration.task_queue import TaskRunner
-from chat_analyzer_api.utils.uploads import managed_upload_temp_file
-from chat_analyzer_api.utils.validators import normalize_timezone, validate_analysis_id
 from chat_analyzer_api.storage.base import StorageBackend
+from chat_analyzer_api.utils.validators import normalize_timezone, validate_analysis_id
+from chat_analyzer_api.workers.task_queue import TaskRunner
 
 
 router = APIRouter(tags=["analyses"])
 
-def _get_repo(request: Request) -> AnalysisRepository:
-    return request.app.state.analysis_repo
-
-
-def _get_runner(request: Request) -> TaskRunner:
-    return request.app.state.task_runner
-
-
-def _get_storage(request: Request) -> StorageBackend:
-    return request.app.state.storage
-
 
 @router.post("/analyses", response_model=AnalysisCreatedResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_analysis(
-    request: Request,
     file: UploadFile = File(...),
     timezone: str = Form("UTC"),
+    settings: Settings = Depends(get_settings),
+    repo: AnalysisRepository = Depends(get_repo),
+    storage: StorageBackend = Depends(get_storage),
+    task_runner: TaskRunner = Depends(get_task_runner),
 ) -> AnalysisCreatedResponse:
-    settings = request.app.state.settings
     analysis_id = uuid.uuid4().hex
     upload_path = f"uploads/{analysis_id}.json"
 
     async with managed_upload_temp_file(file, settings.max_upload_bytes) as (temp_upload_path, _):
-        _get_storage(request).copy_file(upload_path, temp_upload_path)
+        storage.copy_file(upload_path, temp_upload_path)
 
-        created = _get_repo(request).create_analysis(
+        created = repo.create_analysis(
             analysis_id=analysis_id,
             timezone_name=normalize_timezone(timezone),
             upload_path=upload_path,
             ttl_seconds=settings.task_ttl_seconds,
         )
-        await _get_runner(request).enqueue(analysis_id)
+        await task_runner.enqueue(analysis_id)
         return AnalysisCreatedResponse(
             analysis_id=analysis_id,
             status=created["status"],
@@ -63,8 +56,11 @@ async def create_analysis(
 
 
 @router.get("/analyses", response_model=AnalysisListResponse)
-def list_analyses(request: Request, limit: int = Query(20, ge=1, le=200)) -> AnalysisListResponse:
-    rows = _get_repo(request).list_recent_analyses(limit=limit)
+def list_analyses(
+    limit: int = Query(20, ge=1, le=200),
+    repo: AnalysisRepository = Depends(get_repo),
+) -> AnalysisListResponse:
+    rows = repo.list_recent_analyses(limit=limit)
     return AnalysisListResponse(
         items=[
             AnalysisListItem(
@@ -81,9 +77,9 @@ def list_analyses(request: Request, limit: int = Query(20, ge=1, le=200)) -> Ana
 
 
 @router.get("/analyses/{analysis_id}/status", response_model=AnalysisStatusResponse)
-def get_analysis_status(analysis_id: str, request: Request) -> AnalysisStatusResponse:
+def get_analysis_status(analysis_id: str, repo: AnalysisRepository = Depends(get_repo)) -> AnalysisStatusResponse:
     safe_analysis_id = validate_analysis_id(analysis_id)
-    row = _get_repo(request).get_analysis(safe_analysis_id)
+    row = repo.get_analysis(safe_analysis_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
 
@@ -100,20 +96,24 @@ def get_analysis_status(analysis_id: str, request: Request) -> AnalysisStatusRes
 
 
 @router.get("/analyses/{analysis_id}/dashboard", response_model=DashboardResponse)
-def get_analysis_dashboard(analysis_id: str, request: Request) -> DashboardResponse:
+def get_analysis_dashboard(
+    analysis_id: str,
+    repo: AnalysisRepository = Depends(get_repo),
+    storage: StorageBackend = Depends(get_storage),
+) -> DashboardResponse:
     safe_analysis_id = validate_analysis_id(analysis_id)
-    row = _get_repo(request).get_analysis(safe_analysis_id)
+    row = repo.get_analysis(safe_analysis_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
     if row["status"] != STATUS_DONE:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Analysis is not completed yet")
 
     result_path = row.get("result_path")
-    if not result_path or not _get_storage(request).exists(result_path):
+    if not result_path or not storage.exists(result_path):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dashboard payload not found")
 
     try:
-        payload = _get_storage(request).read_json(result_path)
+        payload = storage.read_json(result_path)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dashboard payload not found") from exc
     except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
@@ -125,21 +125,28 @@ def get_analysis_dashboard(analysis_id: str, request: Request) -> DashboardRespo
 
 
 @router.delete("/analyses/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_analysis(analysis_id: str, request: Request) -> Response:
+def delete_analysis(
+    analysis_id: str,
+    repo: AnalysisRepository = Depends(get_repo),
+    storage: StorageBackend = Depends(get_storage),
+) -> Response:
     safe_analysis_id = validate_analysis_id(analysis_id)
-    row = _get_repo(request).get_analysis(safe_analysis_id)
+    row = repo.get_analysis(safe_analysis_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
 
-    _get_storage(request).remove_path(row.get("upload_path"))
-    _get_storage(request).remove_path(row.get("result_path"))
-    _get_repo(request).delete_analysis(safe_analysis_id)
+    storage.remove_path(row.get("upload_path"))
+    storage.remove_path(row.get("result_path"))
+    repo.delete_analysis(safe_analysis_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/healthz", response_model=HealthResponse)
-def healthz(request: Request) -> HealthResponse:
-    repo_ok = _get_repo(request).healthcheck()
-    storage_ok = _get_storage(request).healthcheck()
+def healthz(
+    repo: AnalysisRepository = Depends(get_repo),
+    storage: StorageBackend = Depends(get_storage),
+) -> HealthResponse:
+    repo_ok = repo.healthcheck()
+    storage_ok = storage.healthcheck()
     status_value = "ok" if repo_ok and storage_ok else "degraded"
     return HealthResponse(status=status_value, sqlite_ok=repo_ok, storage_ok=storage_ok)
