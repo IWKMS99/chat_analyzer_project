@@ -16,3 +16,13 @@ def test_anomaly_streaming_has_non_empty_anomaly_frame():
     out = agg.result()
     assert "daily" in out
     assert not out["daily"].empty
+
+
+def test_anomaly_modes_return_metrics_streaming():
+    agg = AnomalyAggregator(threshold=0.5, mode="both")
+    for chunk in iter_chat_chunks(str(FIXTURES / "chat_small.json"), chunk_size=2):
+        chunk = localize_chunk(chunk, "UTC")
+        agg.update(chunk)
+    out = agg.result()
+    assert "metrics" in out
+    assert out["metrics"]["mode"] == "both"
