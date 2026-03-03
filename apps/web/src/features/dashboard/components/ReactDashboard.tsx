@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import type { DashboardResponse } from "@chat-analyzer/api-contracts";
+import { cn } from "../../../lib/utils";
 import type { DatasetCardModel } from "../model";
 import { useI18n } from "../../i18n/useI18n";
 import { DatasetChart } from "./DatasetChart";
@@ -59,6 +60,42 @@ function DatasetSkeleton() {
       <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
     </div>
   );
+}
+
+function bentoCardClass(dataset: DatasetCardModel, index: number, isExpanded: boolean): string {
+  if (isExpanded) {
+    return "md:col-span-4 xl:col-span-6";
+  }
+
+  const source = `${dataset.id} ${dataset.title}`.toLowerCase();
+  const isHourlyActivity = source.includes("activity") && (source.includes("hourly") || source.includes("hour"));
+  if (isHourlyActivity) {
+    return "md:col-span-4 xl:col-span-4";
+  }
+
+  const isTopUsers =
+    source.includes("top users") ||
+    source.includes("message_counts") ||
+    source.includes("user_counts") ||
+    source.includes("participants") ||
+    source.includes("vocabulary");
+  if (isTopUsers) {
+    return "md:col-span-2 xl:col-span-2 xl:row-span-2";
+  }
+
+  if (dataset.semanticKind === "time_series" && dataset.hasChart) {
+    return "md:col-span-2 xl:col-span-3";
+  }
+
+  if (dataset.semanticKind === "network_edges") {
+    return "md:col-span-4 xl:col-span-3";
+  }
+
+  if (index % 6 === 0) {
+    return "md:col-span-4 xl:col-span-3";
+  }
+
+  return "md:col-span-2 xl:col-span-2";
 }
 
 export function ReactDashboard({ dashboard }: Props) {
@@ -139,7 +176,7 @@ export function ReactDashboard({ dashboard }: Props) {
 
   return (
     <section className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         {kpis.map((item) => {
           const label =
             item.key === "total_messages"
@@ -150,10 +187,16 @@ export function ReactDashboard({ dashboard }: Props) {
                   ? t("kpi.start")
                   : item.key === "end"
                     ? t("kpi.end")
-                    : item.key === "timezone"
+                : item.key === "timezone"
                       ? t("kpi.timezone")
                       : item.key;
-          return <KpiCard key={item.key} label={label} value={item.value} />;
+          const isCompactKpi = item.key === "total_messages" || item.key === "participants";
+          const kpiClass = isCompactKpi
+            ? "xl:col-span-1"
+            : item.key === "timezone"
+              ? "sm:col-span-2 lg:col-span-2 xl:col-span-2"
+              : "sm:col-span-1 lg:col-span-1 xl:col-span-2";
+          return <KpiCard key={item.key} label={label} value={item.value} compact={isCompactKpi} className={kpiClass} />;
         })}
       </div>
 
@@ -194,8 +237,8 @@ export function ReactDashboard({ dashboard }: Props) {
             <h3 className="text-xl font-heading text-ink">{section.title}</h3>
           </header>
 
-          <div className="grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
-              {section.cards.map((dataset) => {
+          <div className="grid auto-rows-[minmax(12rem,auto)] items-start gap-4 md:grid-cols-4 xl:grid-cols-6">
+              {section.cards.map((dataset, index) => {
                 const isExpanded = Boolean(expandedCards[dataset.id]);
                 const isTableExpanded = Boolean(expandedTable[dataset.id]);
                 const isLoading = Boolean(loadingCards[dataset.id]);
@@ -205,7 +248,7 @@ export function ReactDashboard({ dashboard }: Props) {
                   <motion.article
                     layout="size"
                     key={dataset.id}
-                    className="surface-elevated self-start overflow-hidden p-4"
+                    className={cn("surface-elevated self-start overflow-hidden p-4", bentoCardClass(dataset, index, isExpanded))}
                     transition={{ type: "spring", stiffness: 360, damping: 34, mass: 0.65 }}
                   >
                     <button
