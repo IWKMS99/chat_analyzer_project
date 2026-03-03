@@ -3,10 +3,12 @@ from typing import Dict
 
 import pandas as pd
 
-from chat_analyzer_core.analysis.nlp_spacy import default_workers, process_texts_spacy, update_emoji_counter
+from chat_analyzer_core.analysis.nlp_processor import default_workers, process_texts_spacy, update_emoji_counter
+
+from .base import BaseAggregator
 
 
-class NlpAggregator:
+class NlpAggregator(BaseAggregator):
     def __init__(self, include_forwarded: bool = False, max_workers: int | None = None):
         self.include_forwarded = include_forwarded
         self.max_workers = max_workers if max_workers is not None else default_workers()

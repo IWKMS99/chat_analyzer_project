@@ -3,10 +3,11 @@ from typing import Dict
 
 import pandas as pd
 
-from .common import logger
+from .base import BaseAggregator
+from .stats import logger
 
 
-class TemporalAggregator:
+class TemporalAggregator(BaseAggregator):
     def __init__(self, response_limit_minutes: float = 60.0, interval_limit_seconds: float = 3600.0):
         self.response_limit_minutes = response_limit_minutes
         self.interval_limit_seconds = interval_limit_seconds

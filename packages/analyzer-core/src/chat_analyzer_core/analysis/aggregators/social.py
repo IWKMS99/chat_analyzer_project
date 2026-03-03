@@ -3,10 +3,11 @@ from typing import Dict
 
 import pandas as pd
 
-from .common import logger
+from .base import BaseAggregator
+from .stats import logger
 
 
-class SocialAggregator:
+class SocialAggregator(BaseAggregator):
     def __init__(self):
         self.reactions_received = Counter()
         self.edited_by_user = Counter()

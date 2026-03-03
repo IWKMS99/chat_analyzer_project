@@ -4,10 +4,11 @@ from typing import Dict
 
 import pandas as pd
 
-from .common import hist_median, logger
+from .base import BaseAggregator
+from .stats import hist_median, logger
 
 
-class DialogAggregator:
+class DialogAggregator(BaseAggregator):
     def __init__(
         self,
         response_limit_minutes: float = 240.0,

@@ -3,10 +3,11 @@ from typing import Dict
 
 import pandas as pd
 
-from .common import hist_median, logger
+from .base import BaseAggregator
+from .stats import hist_median, logger
 
 
-class UserAggregator:
+class UserAggregator(BaseAggregator):
     def __init__(self):
         self.message_counts = Counter()
         self.sum_text_len = Counter()

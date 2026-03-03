@@ -3,10 +3,11 @@ from typing import Dict
 
 import pandas as pd
 
-from .common import hist_median, hist_quantile
+from .base import BaseAggregator
+from .stats import hist_median, hist_quantile
 
 
-class MessageAggregator:
+class MessageAggregator(BaseAggregator):
     def __init__(self, length_threshold: int = 50):
         self.length_threshold = length_threshold
         self.length_hist = defaultdict(Counter)

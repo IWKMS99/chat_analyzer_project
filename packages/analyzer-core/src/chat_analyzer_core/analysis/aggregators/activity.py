@@ -3,8 +3,10 @@ from typing import Dict
 
 import pandas as pd
 
+from .base import BaseAggregator
 
-class ActivityAggregator:
+
+class ActivityAggregator(BaseAggregator):
     def __init__(self):
         self.hourly = Counter()
         self.weekday = Counter()

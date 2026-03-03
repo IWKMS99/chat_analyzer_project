@@ -4,8 +4,10 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
+from .base import BaseAggregator
 
-class AnomalyAggregator:
+
+class AnomalyAggregator(BaseAggregator):
     def __init__(self, threshold: float = 2.0, mode: str = "robust"):
         self.threshold = threshold
         self.mode = mode

@@ -1,9 +1,10 @@
 import pandas as pd
 
-from .common import CoreStats
+from .base import BaseAggregator
+from .models import CoreStats
 
 
-class SummaryAggregator:
+class SummaryAggregator(BaseAggregator):
     def __init__(self):
         self.total_messages = 0
         self.participants = set()

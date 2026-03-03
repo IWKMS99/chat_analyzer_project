@@ -1,19 +1,9 @@
 import logging
 from collections import Counter
-from dataclasses import dataclass
 
 import numpy as np
-import pandas as pd
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class CoreStats:
-    total_messages: int
-    participants: int
-    start: pd.Timestamp | None
-    end: pd.Timestamp | None
 
 
 def hist_median(hist: Counter[int]) -> float:

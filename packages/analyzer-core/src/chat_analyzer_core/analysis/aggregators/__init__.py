@@ -1,8 +1,9 @@
 from .activity import ActivityAggregator
 from .anomaly import AnomalyAggregator
-from .common import CoreStats
+from .base import BaseAggregator
 from .dialog import DialogAggregator
 from .message import MessageAggregator
+from .models import CoreStats
 from .nlp import NlpAggregator
 from .social import SocialAggregator
 from .summary import SummaryAggregator
@@ -12,6 +13,7 @@ from .user import UserAggregator
 __all__ = [
     "ActivityAggregator",
     "AnomalyAggregator",
+    "BaseAggregator",
     "CoreStats",
     "DialogAggregator",
     "MessageAggregator",
