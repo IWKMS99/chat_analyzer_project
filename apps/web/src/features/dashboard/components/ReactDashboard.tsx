@@ -55,6 +55,10 @@ export function ReactDashboard({ dashboard }: Props) {
         {datasetCards.map((dataset) => {
           const isExpanded = Boolean(expandedTable[dataset.id]);
           const previewRows = isExpanded ? dataset.rows : dataset.rows.slice(0, 8);
+          const semanticKindLabel =
+            dataset.meta && dataset.meta.semantic_kind && dataset.meta.semantic_kind !== "fallback"
+              ? ` | ${dataset.meta.semantic_kind}`
+              : "";
 
           return (
             <article key={dataset.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-sm">
@@ -63,7 +67,7 @@ export function ReactDashboard({ dashboard }: Props) {
                 <h3 className="mt-1 text-xl font-heading text-ink">{dataset.title}</h3>
                 <p className="mt-1 text-xs text-slate-600">
                   {dataset.rows.length} rows
-                  {dataset.meta ? ` | ${dataset.meta.semantic_kind}` : ""}
+                  {semanticKindLabel}
                 </p>
               </header>
 

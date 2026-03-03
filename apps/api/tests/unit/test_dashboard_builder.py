@@ -62,3 +62,67 @@ def test_dashboard_builder_skips_table_only_dataset_chart():
     dashboard = build_dashboard_payload("a1", result)
     assert any(widget["id"].startswith("dialog_sessions_table") for widget in dashboard["widgets"])
     assert not any(widget["id"].startswith("dialog_sessions_chart") for widget in dashboard["widgets"])
+
+
+def test_dashboard_builder_uses_non_fallback_semantic_kind_for_explicit_registry_datasets():
+    result = {
+        "summary": {"total_messages": 8, "participants": 2, "start": None, "end": None, "timezone": "UTC"},
+        "modules": {
+            "user": {
+                "data": {
+                    "message_counts": [{"from": "Alice", "count": 5}],
+                    "avg_length": [{"from": "Alice", "avg_text_length": 17.5}],
+                    "chains": [{"from": "Alice", "avg_chain": 2.0, "median_chain": 2.0, "max_chain": 4.0}],
+                },
+                "warnings": [],
+            },
+            "message": {
+                "data": {
+                    "lengths": [{"from": "Alice", "mean": 12.0, "median": 10.0, "p95": 24.0}],
+                    "question_ratio": [{"from": "Alice", "questions": 2, "total": 8, "ratio": 0.25}],
+                },
+                "warnings": [],
+            },
+            "nlp": {
+                "data": {
+                    "keywords": [{"word": "hello", "count": 5}],
+                    "vocabulary": [{"from": "Alice", "total_words": 20, "unique_words": 12, "lexical_diversity": 0.6}],
+                    "emoji": [{"emoji": ":)", "count": 4}],
+                },
+                "warnings": [],
+            },
+            "social": {
+                "data": {
+                    "reaction_edges": [{"from": "Alice", "count": 3}],
+                    "edited_deleted": [{"from": "Alice", "edited_ratio": 0.1, "deleted_ratio": 0.0}],
+                },
+                "warnings": [],
+            },
+            "anomaly": {
+                "data": {
+                    "anomalies": [{"date_only": "2026-01-01", "count": 2, "robust_score": 3.0}],
+                },
+                "warnings": [],
+            },
+        },
+        "metadata": {"warnings": [], "generated_at": "2026-01-01T00:00:00+00:00", "duration_sec": 1.2},
+    }
+
+    dashboard = build_dashboard_payload("a2", result)
+    expected_semantics = {
+        "user_message_counts_ds": "categorical_breakdown",
+        "user_avg_length_ds": "categorical_breakdown",
+        "user_chains_ds": "categorical_breakdown",
+        "message_lengths_ds": "distribution",
+        "message_question_ratio_ds": "categorical_breakdown",
+        "nlp_keywords_ds": "distribution",
+        "nlp_vocabulary_ds": "categorical_breakdown",
+        "nlp_emoji_ds": "categorical_breakdown",
+        "social_reaction_edges_ds": "categorical_breakdown",
+        "social_edited_deleted_ds": "categorical_breakdown",
+        "anomaly_anomalies_ds": "time_series",
+    }
+
+    for dataset_id, semantic_kind in expected_semantics.items():
+        assert dashboard["dataset_meta"][dataset_id]["semantic_kind"] == semantic_kind
+        assert dashboard["dataset_meta"][dataset_id]["semantic_kind"] != "fallback"

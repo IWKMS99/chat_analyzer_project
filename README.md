@@ -52,6 +52,20 @@ docker compose up --build
 - API healthcheck: `http://localhost:8080/api/healthz`
 - API docs (via web reverse proxy): `http://localhost:8080/docs`
 
+## Docker Data Refresh
+
+`docker compose` uses a persistent volume (`backend_data`) for uploaded files and generated dashboard JSON.
+If you update analyzer or dashboard rendering logic, old analyses will keep old JSON payloads until recomputed.
+
+Refresh runbook:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+Then upload chats again to regenerate `results/*.json` with the current code.
+
 ## Developer Scripts
 
 - `scripts/dev/bootstrap.sh` - install Python and JS dependencies.
