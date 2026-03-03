@@ -4,6 +4,26 @@
  * chat-analyzer-api
  * OpenAPI spec version: 2.0.0
  */
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
+import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
+  MutationFunction,
+  QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult
+} from '@tanstack/react-query';
+
+import { customFetch } from '../custom-fetch';
 export interface AnalysisCreatedResponse {
   analysis_id: string;
   created_at: string;
@@ -73,7 +93,7 @@ export interface AnalysisStatusResponse {
 }
 
 export interface BodyCreateAnalysisApiAnalysesPost {
-  file: string;
+  file: Blob;
   timezone?: string;
 }
 
@@ -265,7 +285,7 @@ export interface ValidationError {
   type: string;
 }
 
-export type ListAnalysesApiAnalysesGetParams = {
+export type ListAnalysesParams = {
 /**
  * @minimum 1
  * @maximum 200
@@ -273,29 +293,19 @@ export type ListAnalysesApiAnalysesGetParams = {
 limit?: number;
 };
 
+type AwaitedInput<T> = PromiseLike<T> | T;
+
+      type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
+
+
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
 /**
  * @summary List Analyses
  */
-export type listAnalysesApiAnalysesGetResponse200 = {
-  data: AnalysisListResponse
-  status: 200
-}
-
-export type listAnalysesApiAnalysesGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-    
-export type listAnalysesApiAnalysesGetResponseSuccess = (listAnalysesApiAnalysesGetResponse200) & {
-  headers: Headers;
-};
-export type listAnalysesApiAnalysesGetResponseError = (listAnalysesApiAnalysesGetResponse422) & {
-  headers: Headers;
-};
-
-export type listAnalysesApiAnalysesGetResponse = (listAnalysesApiAnalysesGetResponseSuccess | listAnalysesApiAnalysesGetResponseError)
-
-export const getListAnalysesApiAnalysesGetUrl = (params?: ListAnalysesApiAnalysesGetParams,) => {
+export const getListAnalysesUrl = (params?: ListAnalysesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -310,48 +320,100 @@ export const getListAnalysesApiAnalysesGetUrl = (params?: ListAnalysesApiAnalyse
   return stringifiedParams.length > 0 ? `/api/analyses?${stringifiedParams}` : `/api/analyses`
 }
 
-export const listAnalysesApiAnalysesGet = async (params?: ListAnalysesApiAnalysesGetParams, options?: RequestInit): Promise<listAnalysesApiAnalysesGetResponse> => {
+export const list_analyses = async (params?: ListAnalysesParams, options?: RequestInit): Promise<AnalysisListResponse> => {
   
-  const res = await fetch(getListAnalysesApiAnalysesGetUrl(params),
+  return customFetch<AnalysisListResponse>(getListAnalysesUrl(params),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
+);}
 
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+
+
+
+export const getListAnalysesQueryKey = (params?: ListAnalysesParams,) => {
+    return [
+    `/api/analyses`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListAnalysesQueryOptions = <TData = Awaited<ReturnType<typeof list_analyses>>, TError = HTTPValidationError>(params?: ListAnalysesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof list_analyses>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAnalysesQueryKey(params);
+
   
-  const data: listAnalysesApiAnalysesGetResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as listAnalysesApiAnalysesGetResponse
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof list_analyses>>> = ({ signal }) => list_analyses(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof list_analyses>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
+
+export type ListAnalysesQueryResult = NonNullable<Awaited<ReturnType<typeof list_analyses>>>
+export type ListAnalysesQueryError = HTTPValidationError
+
+
+export function useListAnalyses<TData = Awaited<ReturnType<typeof list_analyses>>, TError = HTTPValidationError>(
+ params: undefined |  ListAnalysesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof list_analyses>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof list_analyses>>,
+          TError,
+          Awaited<ReturnType<typeof list_analyses>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAnalyses<TData = Awaited<ReturnType<typeof list_analyses>>, TError = HTTPValidationError>(
+ params?: ListAnalysesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof list_analyses>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof list_analyses>>,
+          TError,
+          Awaited<ReturnType<typeof list_analyses>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAnalyses<TData = Awaited<ReturnType<typeof list_analyses>>, TError = HTTPValidationError>(
+ params?: ListAnalysesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof list_analyses>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Analyses
+ */
+
+export function useListAnalyses<TData = Awaited<ReturnType<typeof list_analyses>>, TError = HTTPValidationError>(
+ params?: ListAnalysesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof list_analyses>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAnalysesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
 
 
 
 /**
  * @summary Create Analysis
  */
-export type createAnalysisApiAnalysesPostResponse202 = {
-  data: AnalysisCreatedResponse
-  status: 202
-}
-
-export type createAnalysisApiAnalysesPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-    
-export type createAnalysisApiAnalysesPostResponseSuccess = (createAnalysisApiAnalysesPostResponse202) & {
-  headers: Headers;
-};
-export type createAnalysisApiAnalysesPostResponseError = (createAnalysisApiAnalysesPostResponse422) & {
-  headers: Headers;
-};
-
-export type createAnalysisApiAnalysesPostResponse = (createAnalysisApiAnalysesPostResponseSuccess | createAnalysisApiAnalysesPostResponseError)
-
-export const getCreateAnalysisApiAnalysesPostUrl = () => {
+export const getCreateAnalysisUrl = () => {
 
 
   
@@ -359,14 +421,14 @@ export const getCreateAnalysisApiAnalysesPostUrl = () => {
   return `/api/analyses`
 }
 
-export const createAnalysisApiAnalysesPost = async (bodyCreateAnalysisApiAnalysesPost: BodyCreateAnalysisApiAnalysesPost, options?: RequestInit): Promise<createAnalysisApiAnalysesPostResponse> => {
+export const create_analysis = async (bodyCreateAnalysisApiAnalysesPost: BodyCreateAnalysisApiAnalysesPost, options?: RequestInit): Promise<AnalysisCreatedResponse> => {
     const formData = new FormData();
 formData.append(`file`, bodyCreateAnalysisApiAnalysesPost.file)
 if(bodyCreateAnalysisApiAnalysesPost.timezone !== undefined) {
  formData.append(`timezone`, bodyCreateAnalysisApiAnalysesPost.timezone)
  }
 
-  const res = await fetch(getCreateAnalysisApiAnalysesPostUrl(),
+  return customFetch<AnalysisCreatedResponse>(getCreateAnalysisUrl(),
   {      
     ...options,
     method: 'POST'
@@ -374,39 +436,61 @@ if(bodyCreateAnalysisApiAnalysesPost.timezone !== undefined) {
     body: 
       formData,
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: createAnalysisApiAnalysesPostResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as createAnalysisApiAnalysesPostResponse
-}
+);}
 
 
 
+
+export const getCreateAnalysisMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof create_analysis>>, TError,{data: BodyCreateAnalysisApiAnalysesPost}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof create_analysis>>, TError,{data: BodyCreateAnalysisApiAnalysesPost}, TContext> => {
+
+const mutationKey = ['createAnalysis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof create_analysis>>, {data: BodyCreateAnalysisApiAnalysesPost}> = (props) => {
+          const {data} = props ?? {};
+
+          return  create_analysis(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAnalysisMutationResult = NonNullable<Awaited<ReturnType<typeof create_analysis>>>
+    export type CreateAnalysisMutationBody = BodyCreateAnalysisApiAnalysesPost
+    export type CreateAnalysisMutationError = HTTPValidationError
+
+    /**
+ * @summary Create Analysis
+ */
+export const useCreateAnalysis = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof create_analysis>>, TError,{data: BodyCreateAnalysisApiAnalysesPost}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof create_analysis>>,
+        TError,
+        {data: BodyCreateAnalysisApiAnalysesPost},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateAnalysisMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 /**
  * @summary Delete Analysis
  */
-export type deleteAnalysisApiAnalysesAnalysisIdDeleteResponse204 = {
-  data: void
-  status: 204
-}
-
-export type deleteAnalysisApiAnalysesAnalysisIdDeleteResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-    
-export type deleteAnalysisApiAnalysesAnalysisIdDeleteResponseSuccess = (deleteAnalysisApiAnalysesAnalysisIdDeleteResponse204) & {
-  headers: Headers;
-};
-export type deleteAnalysisApiAnalysesAnalysisIdDeleteResponseError = (deleteAnalysisApiAnalysesAnalysisIdDeleteResponse422) & {
-  headers: Headers;
-};
-
-export type deleteAnalysisApiAnalysesAnalysisIdDeleteResponse = (deleteAnalysisApiAnalysesAnalysisIdDeleteResponseSuccess | deleteAnalysisApiAnalysesAnalysisIdDeleteResponseError)
-
-export const getDeleteAnalysisApiAnalysesAnalysisIdDeleteUrl = (analysisId: string,) => {
+export const getDeleteAnalysisUrl = (analysisId: string,) => {
 
 
   
@@ -414,48 +498,70 @@ export const getDeleteAnalysisApiAnalysesAnalysisIdDeleteUrl = (analysisId: stri
   return `/api/analyses/${analysisId}`
 }
 
-export const deleteAnalysisApiAnalysesAnalysisIdDelete = async (analysisId: string, options?: RequestInit): Promise<deleteAnalysisApiAnalysesAnalysisIdDeleteResponse> => {
+export const delete_analysis = async (analysisId: string, options?: RequestInit): Promise<void> => {
   
-  const res = await fetch(getDeleteAnalysisApiAnalysesAnalysisIdDeleteUrl(analysisId),
+  return customFetch<void>(getDeleteAnalysisUrl(analysisId),
   {      
     ...options,
     method: 'DELETE'
     
     
   }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: deleteAnalysisApiAnalysesAnalysisIdDeleteResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as deleteAnalysisApiAnalysesAnalysisIdDeleteResponse
-}
+);}
 
 
 
+
+export const getDeleteAnalysisMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof delete_analysis>>, TError,{analysisId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof delete_analysis>>, TError,{analysisId: string}, TContext> => {
+
+const mutationKey = ['deleteAnalysis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof delete_analysis>>, {analysisId: string}> = (props) => {
+          const {analysisId} = props ?? {};
+
+          return  delete_analysis(analysisId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAnalysisMutationResult = NonNullable<Awaited<ReturnType<typeof delete_analysis>>>
+    
+    export type DeleteAnalysisMutationError = HTTPValidationError
+
+    /**
+ * @summary Delete Analysis
+ */
+export const useDeleteAnalysis = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof delete_analysis>>, TError,{analysisId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof delete_analysis>>,
+        TError,
+        {analysisId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteAnalysisMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 /**
  * @summary Get Analysis Dashboard
  */
-export type getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse200 = {
-  data: DashboardResponse
-  status: 200
-}
-
-export type getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-    
-export type getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponseSuccess = (getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse200) & {
-  headers: Headers;
-};
-export type getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponseError = (getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse422) & {
-  headers: Headers;
-};
-
-export type getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse = (getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponseSuccess | getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponseError)
-
-export const getGetAnalysisDashboardApiAnalysesAnalysisIdDashboardGetUrl = (analysisId: string,) => {
+export const getGetAnalysisDashboardUrl = (analysisId: string,) => {
 
 
   
@@ -463,48 +569,100 @@ export const getGetAnalysisDashboardApiAnalysesAnalysisIdDashboardGetUrl = (anal
   return `/api/analyses/${analysisId}/dashboard`
 }
 
-export const getAnalysisDashboardApiAnalysesAnalysisIdDashboardGet = async (analysisId: string, options?: RequestInit): Promise<getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse> => {
+export const get_analysis_dashboard = async (analysisId: string, options?: RequestInit): Promise<DashboardResponse> => {
   
-  const res = await fetch(getGetAnalysisDashboardApiAnalysesAnalysisIdDashboardGetUrl(analysisId),
+  return customFetch<DashboardResponse>(getGetAnalysisDashboardUrl(analysisId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
+);}
 
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+
+
+
+export const getGetAnalysisDashboardQueryKey = (analysisId?: string,) => {
+    return [
+    `/api/analyses/${analysisId}/dashboard`
+    ] as const;
+    }
+
+    
+export const getGetAnalysisDashboardQueryOptions = <TData = Awaited<ReturnType<typeof get_analysis_dashboard>>, TError = HTTPValidationError>(analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_dashboard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAnalysisDashboardQueryKey(analysisId);
+
   
-  const data: getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as getAnalysisDashboardApiAnalysesAnalysisIdDashboardGetResponse
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_analysis_dashboard>>> = ({ signal }) => get_analysis_dashboard(analysisId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(analysisId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_analysis_dashboard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
+
+export type GetAnalysisDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof get_analysis_dashboard>>>
+export type GetAnalysisDashboardQueryError = HTTPValidationError
+
+
+export function useGetAnalysisDashboard<TData = Awaited<ReturnType<typeof get_analysis_dashboard>>, TError = HTTPValidationError>(
+ analysisId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_dashboard>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get_analysis_dashboard>>,
+          TError,
+          Awaited<ReturnType<typeof get_analysis_dashboard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAnalysisDashboard<TData = Awaited<ReturnType<typeof get_analysis_dashboard>>, TError = HTTPValidationError>(
+ analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_dashboard>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get_analysis_dashboard>>,
+          TError,
+          Awaited<ReturnType<typeof get_analysis_dashboard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAnalysisDashboard<TData = Awaited<ReturnType<typeof get_analysis_dashboard>>, TError = HTTPValidationError>(
+ analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_dashboard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Analysis Dashboard
+ */
+
+export function useGetAnalysisDashboard<TData = Awaited<ReturnType<typeof get_analysis_dashboard>>, TError = HTTPValidationError>(
+ analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_dashboard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAnalysisDashboardQueryOptions(analysisId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
 
 
 
 /**
  * @summary Get Analysis Status
  */
-export type getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse200 = {
-  data: AnalysisStatusResponse
-  status: 200
-}
-
-export type getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-    
-export type getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponseSuccess = (getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse200) & {
-  headers: Headers;
-};
-export type getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponseError = (getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse422) & {
-  headers: Headers;
-};
-
-export type getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse = (getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponseSuccess | getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponseError)
-
-export const getGetAnalysisStatusApiAnalysesAnalysisIdStatusGetUrl = (analysisId: string,) => {
+export const getGetAnalysisStatusUrl = (analysisId: string,) => {
 
 
   
@@ -512,41 +670,100 @@ export const getGetAnalysisStatusApiAnalysesAnalysisIdStatusGetUrl = (analysisId
   return `/api/analyses/${analysisId}/status`
 }
 
-export const getAnalysisStatusApiAnalysesAnalysisIdStatusGet = async (analysisId: string, options?: RequestInit): Promise<getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse> => {
+export const get_analysis_status = async (analysisId: string, options?: RequestInit): Promise<AnalysisStatusResponse> => {
   
-  const res = await fetch(getGetAnalysisStatusApiAnalysesAnalysisIdStatusGetUrl(analysisId),
+  return customFetch<AnalysisStatusResponse>(getGetAnalysisStatusUrl(analysisId),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
+);}
 
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+
+
+
+export const getGetAnalysisStatusQueryKey = (analysisId?: string,) => {
+    return [
+    `/api/analyses/${analysisId}/status`
+    ] as const;
+    }
+
+    
+export const getGetAnalysisStatusQueryOptions = <TData = Awaited<ReturnType<typeof get_analysis_status>>, TError = HTTPValidationError>(analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_status>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAnalysisStatusQueryKey(analysisId);
+
   
-  const data: getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as getAnalysisStatusApiAnalysesAnalysisIdStatusGetResponse
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_analysis_status>>> = ({ signal }) => get_analysis_status(analysisId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(analysisId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_analysis_status>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
+
+export type GetAnalysisStatusQueryResult = NonNullable<Awaited<ReturnType<typeof get_analysis_status>>>
+export type GetAnalysisStatusQueryError = HTTPValidationError
+
+
+export function useGetAnalysisStatus<TData = Awaited<ReturnType<typeof get_analysis_status>>, TError = HTTPValidationError>(
+ analysisId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_status>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get_analysis_status>>,
+          TError,
+          Awaited<ReturnType<typeof get_analysis_status>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAnalysisStatus<TData = Awaited<ReturnType<typeof get_analysis_status>>, TError = HTTPValidationError>(
+ analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_status>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof get_analysis_status>>,
+          TError,
+          Awaited<ReturnType<typeof get_analysis_status>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAnalysisStatus<TData = Awaited<ReturnType<typeof get_analysis_status>>, TError = HTTPValidationError>(
+ analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_status>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Analysis Status
+ */
+
+export function useGetAnalysisStatus<TData = Awaited<ReturnType<typeof get_analysis_status>>, TError = HTTPValidationError>(
+ analysisId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_analysis_status>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAnalysisStatusQueryOptions(analysisId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
 
 
 
 /**
  * @summary Healthz
  */
-export type healthzApiHealthzGetResponse200 = {
-  data: HealthResponse
-  status: 200
-}
-    
-export type healthzApiHealthzGetResponseSuccess = (healthzApiHealthzGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type healthzApiHealthzGetResponse = (healthzApiHealthzGetResponseSuccess)
-
-export const getHealthzApiHealthzGetUrl = () => {
+export const getHealthzUrl = () => {
 
 
   
@@ -554,19 +771,88 @@ export const getHealthzApiHealthzGetUrl = () => {
   return `/api/healthz`
 }
 
-export const healthzApiHealthzGet = async ( options?: RequestInit): Promise<healthzApiHealthzGetResponse> => {
+export const healthz = async ( options?: RequestInit): Promise<HealthResponse> => {
   
-  const res = await fetch(getHealthzApiHealthzGetUrl(),
+  return customFetch<HealthResponse>(getHealthzUrl(),
   {      
     ...options,
     method: 'GET'
     
     
   }
-)
+);}
 
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+
+
+
+export const getHealthzQueryKey = () => {
+    return [
+    `/api/healthz`
+    ] as const;
+    }
+
+    
+export const getHealthzQueryOptions = <TData = Awaited<ReturnType<typeof healthz>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthz>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getHealthzQueryKey();
+
   
-  const data: healthzApiHealthzGetResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as healthzApiHealthzGetResponse
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof healthz>>> = ({ signal }) => healthz({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof healthz>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type HealthzQueryResult = NonNullable<Awaited<ReturnType<typeof healthz>>>
+export type HealthzQueryError = unknown
+
+
+export function useHealthz<TData = Awaited<ReturnType<typeof healthz>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthz>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof healthz>>,
+          TError,
+          Awaited<ReturnType<typeof healthz>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useHealthz<TData = Awaited<ReturnType<typeof healthz>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthz>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof healthz>>,
+          TError,
+          Awaited<ReturnType<typeof healthz>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useHealthz<TData = Awaited<ReturnType<typeof healthz>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthz>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Healthz
+ */
+
+export function useHealthz<TData = Awaited<ReturnType<typeof healthz>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthz>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getHealthzQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
 }
