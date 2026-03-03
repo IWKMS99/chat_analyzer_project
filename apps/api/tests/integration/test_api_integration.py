@@ -7,12 +7,13 @@ from fastapi.testclient import TestClient
 
 from chat_analyzer_api.api.router import router as analyses_router
 from chat_analyzer_api.core.config import Settings
-from chat_analyzer_api.db.repo import AnalysisRepository, PHASE_DONE, STATUS_DONE
+from chat_analyzer_api.db.repo import PHASE_DONE, STATUS_DONE
 from chat_analyzer_api.storage.file_storage import FileStorage
 
+from apps.api.tests.helpers import build_repo
 
 class FakeRunner:
-    def __init__(self, repo: AnalysisRepository, storage: FileStorage):
+    def __init__(self, repo, storage: FileStorage):
         self.repo = repo
         self.storage = storage
 
@@ -86,8 +87,7 @@ def _build_test_client(tmp_path: Path, max_upload_bytes: int = 1024 * 1024, comp
         rate_limit_window_seconds=60,
     )
 
-    repo = AnalysisRepository(settings.sqlite_path)
-    repo.init_db()
+    repo = build_repo(Path(settings.sqlite_path))
     storage = FileStorage(settings.storage_base_dir)
     runner = FakeRunner(repo, storage) if complete_immediately else FakeRunnerNoop()
 

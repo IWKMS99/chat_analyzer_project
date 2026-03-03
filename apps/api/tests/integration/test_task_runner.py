@@ -3,14 +3,14 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from chat_analyzer_api.db.repo import AnalysisRepository
 from chat_analyzer_api.services.task_runner import TaskRunner
 from chat_analyzer_api.storage.file_storage import FileStorage
 
+from apps.api.tests.helpers import build_repo
+
 
 def test_cleanup_expired_removes_files_and_rows(tmp_path: Path):
-    repo = AnalysisRepository(str(tmp_path / "analyses.db"))
-    repo.init_db()
+    repo = build_repo(tmp_path / "analyses.db")
     storage = FileStorage(str(tmp_path / "storage"))
 
     created = repo.create_analysis(
@@ -34,8 +34,7 @@ def test_cleanup_expired_removes_files_and_rows(tmp_path: Path):
 
 
 def test_task_runner_stop_without_jobs(tmp_path: Path):
-    repo = AnalysisRepository(str(tmp_path / "analyses.db"))
-    repo.init_db()
+    repo = build_repo(tmp_path / "analyses.db")
     storage = FileStorage(str(tmp_path / "storage"))
     runner = TaskRunner(repo=repo, storage=storage, workers=2, cleanup_interval_seconds=600)
 
