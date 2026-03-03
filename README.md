@@ -25,13 +25,20 @@ corepack pnpm install
 3. Run tests:
 
 ```bash
-uv run pytest -q
+.venv/bin/alembic -c apps/api/alembic.ini upgrade head
+.venv/bin/pytest -q
 ```
 
 4. Build frontend:
 
 ```bash
 corepack pnpm --filter @chat-analyzer/web build
+```
+
+5. Refresh API contracts from OpenAPI:
+
+```bash
+corepack pnpm --filter @chat-analyzer/api-contracts run generate
 ```
 
 5. Run stack:
