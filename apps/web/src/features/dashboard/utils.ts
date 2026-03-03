@@ -1,4 +1,4 @@
-import type { ChartWidget, DashboardResponse, DatasetMeta } from "@chat-analyzer/api-contracts";
+import type { DashboardResponse, DashboardWidget, DatasetMeta } from "@chat-analyzer/api-contracts";
 
 export interface SummaryKpi {
   key: string;
@@ -13,7 +13,7 @@ export interface DatasetCardModel {
   rows: Array<Record<string, unknown>>;
   columns: string[];
   meta: DatasetMeta | null;
-  chartWidget?: ChartWidget;
+  chartWidget?: DashboardWidget;
 }
 
 export interface ChartModel {
@@ -109,7 +109,7 @@ export function summaryKpis(dashboard: DashboardResponse): SummaryKpi[] {
   });
 }
 
-export function buildChartModel(rows: Array<Record<string, unknown>>, chartWidget?: ChartWidget): ChartModel | null {
+export function buildChartModel(rows: Array<Record<string, unknown>>, chartWidget?: DashboardWidget): ChartModel | null {
   if (!rows.length) {
     return null;
   }
@@ -193,10 +193,10 @@ export function buildChartModel(rows: Array<Record<string, unknown>>, chartWidge
 }
 
 export function buildDatasetCards(dashboard: DashboardResponse): DatasetCardModel[] {
-  const chartWidgetByDataset = new Map<string, ChartWidget>();
+  const chartWidgetByDataset = new Map<string, DashboardWidget>();
   for (const widget of dashboard.widgets ?? []) {
-    if (widget.type === "chart") {
-      chartWidgetByDataset.set(widget.dataset, widget as ChartWidget);
+    if (widget.type === "chart" && widget.dataset) {
+      chartWidgetByDataset.set(widget.dataset, widget);
     }
   }
 
