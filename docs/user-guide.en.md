@@ -1,65 +1,36 @@
 # User Guide (English)
 
-## What This Tool Does
+## Product workflow
 
-Chat Analyzer reads Telegram Desktop JSON exports and generates an interactive dashboard with:
+1. Export Telegram chat in JSON format.
+2. Upload the JSON file in Chat Analyzer.
+3. Wait for analysis completion.
+4. Explore dashboard widgets and datasets.
 
-- message and activity metrics,
-- temporal and participant statistics,
-- chart and table widgets for exploration.
-
-## Quick Run (Docker, prebuilt images)
-
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
-
-Open:
-
-- Web UI: `http://localhost:8080`
-- API docs: `http://localhost:8080/docs`
-
-## How To Export Telegram Data (`result.json`)
+## How to export Telegram data (`result.json`)
 
 1. Open **Telegram Desktop**.
-2. Go to **Settings -> Advanced -> Export Telegram data**.
-3. Select **JSON** as export format.
-4. Include messages from the target chat(s).
-5. Keep media disabled for first test runs to reduce file size.
-6. Start export and wait until Telegram creates the output folder.
-7. Open the output folder and locate the exported JSON file (commonly named `result.json`).
+2. Open the target chat you want to analyze.
+3. Click the three-dot menu in the top-right corner.
+4. Select **Export chat history**.
+5. Choose **JSON** format and include message history.
+6. Disable media to reduce export size.
+7. Start export, wait for completion, and locate the JSON file (often `result.json`).
 
-## Upload And Analyze
+## Upload and analyze
 
-1. Open Chat Analyzer Web UI.
-2. Go to analyses screen and use file upload.
-3. Upload Telegram JSON (`result.json` or equivalent export file).
-4. Wait until analysis status becomes `done`.
-5. Open dashboard view.
+1. Open Web UI (`http://localhost:8080`).
+2. Upload exported Telegram JSON.
+3. Track status until it is `done`.
+4. Open dashboard and inspect metrics/charts/tables.
 
-## Troubleshooting
+## Data handling notes
 
-### Upload is rejected (HTTP 413)
+- This is self-hosted software: your data stays in your environment.
+- Uploaded files and generated dashboard payloads are stored in backend storage.
 
-- Increase `MAX_UPLOAD_BYTES` in `.env`.
-- Restart stack after changing env values.
+## Related docs
 
-### Analysis is slow
-
-- Increase `TASK_WORKERS` (up to 4 in current backend validation).
-- Adjust `CHAT_ANALYZER_NLP_WORKERS` if CPU capacity allows.
-
-### Parsing fallback warnings or memory pressure
-
-- Tune `CHAT_ANALYZER_FALLBACK_JSON_MAX_BYTES`.
-- Start with smaller chats to verify pipeline health.
-
-### UI cannot reach API
-
-- Verify `VITE_API_BASE_URL` and reverse-proxy path.
-- Check API health endpoint: `http://localhost:8080/api/healthz`.
-
-### Wrong locale/text display issues
-
-- Ensure JSON is exported by Telegram Desktop without manual re-encoding.
-- Avoid editing export files in tools that change encoding.
+- Fast setup: [getting-started.en.md](getting-started.en.md)
+- Configuration: [configuration.en.md](configuration.en.md)
+- Operations and troubleshooting: [operations.en.md](operations.en.md)

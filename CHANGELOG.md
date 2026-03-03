@@ -7,21 +7,25 @@ and this project adheres to Semantic Versioning.
 
 ## [0.1.0] - 2026-03-04
 
-### Added
+Initial public release of Chat Analyzer.
 
-- OSS baseline documentation (`LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`).
-- User documentation in English and Russian (`docs/user-guide.*.md`).
-- Environment configuration references in English and Russian (`docs/configuration.*.md`).
-- Demo dataset for onboarding (`examples/example_chat.json`).
-- Community templates for issues and pull requests.
-- GHCR release workflow for API and Web images.
-- Production compose file using prebuilt images (`infra/docker-compose.prod.yml`).
+Included in this release:
 
-### Changed
+- FastAPI backend with upload, analysis lifecycle, and dashboard APIs.
+- React/Vite web dashboard UI (charts, KPI cards, tabular views).
+- Shared analyzer engine and generated API contracts in monorepo layout.
+- Docker deployment options:
+  - source-based development stack,
+  - production stack with GHCR prebuilt images.
+- OSS baseline files:
+  - `LICENSE` (MIT),
+  - `CONTRIBUTING.md`,
+  - `SECURITY.md`,
+  - `CODE_OF_CONDUCT.md`,
+  - issue/PR templates.
+- User/operator documentation and demo dataset (`examples/example_chat.json`).
 
-- Unified monorepo version references around `0.1.0`.
-- Expanded `README.md` for both users and contributors.
+Release image tags:
 
-### Notes
-
-- Release images are published as `vX.Y.Z` and `latest` when a GitHub Release is published.
+- `ghcr.io/<owner>/chat-analyzer-api:v0.1.0` and `latest`
+- `ghcr.io/<owner>/chat-analyzer-web:v0.1.0` and `latest`

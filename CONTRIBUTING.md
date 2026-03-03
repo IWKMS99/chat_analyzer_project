@@ -2,71 +2,68 @@
 
 Thanks for contributing to Chat Analyzer.
 
-## Development Setup
+## Before you start
 
-### Prerequisites
+- Read architecture notes: [docs/architecture.en.md](docs/architecture.en.md)
+- Read operational/release notes: [docs/operations.en.md](docs/operations.en.md)
+- Check open issues and avoid duplicated work.
+
+## Local setup
+
+Prerequisites:
 
 - Python 3.11+
-- `uv`
+- `uv` (or `.venv/bin/uv`)
 - Node.js 20+
-- `pnpm` (via Corepack)
-- Docker (optional, recommended for full stack)
+- `pnpm` via Corepack
 
-### Install dependencies
+Install dependencies:
 
 ```bash
 uv sync
 corepack pnpm install
 ```
 
-### Run local checks
+## Development flow
+
+1. Create a focused branch.
+2. Implement changes with tests.
+3. Run local checks.
+4. Open PR with summary and risks.
+
+## Local checks
 
 ```bash
 scripts/ci/verify.sh
 ```
 
-Equivalent manual checks:
+Manual equivalent:
 
 ```bash
-uv run ruff check .
-uv run pytest -q
-pnpm --filter @chat-analyzer/web build
-pnpm --filter @chat-analyzer/web test:smoke
+.venv/bin/ruff check .
+.venv/bin/pytest -q
+corepack pnpm --filter @chat-analyzer/web build
 ```
 
-## API Contracts Workflow
+## API contracts
 
-When API schema changes:
+If backend schema changed:
 
 ```bash
 corepack pnpm --filter @chat-analyzer/api-contracts run generate
 ```
 
-Commit generated updates from `packages/api-contracts` in the same PR.
+Commit generated files from `packages/api-contracts` in the same PR.
 
-## Pull Request Rules
+## Pull request expectations
 
-- Keep PRs focused and small enough for review.
-- Add or update tests for behavioral changes.
-- Update docs when changing setup, runtime, or user-facing behavior.
+- Keep PR scope tight.
+- Include tests for behavior changes.
+- Update docs for user/operator/developer flow changes.
 - Ensure CI is green before requesting review.
+- Update screenshots in `docs/assets/` if UI changed significantly.
 
-## Versioning And Releases
+## Security
 
-This repository uses one monorepo SemVer version.
-
-- `MAJOR`: breaking changes (API behavior, compatibility, schema expectations).
-- `MINOR`: backward-compatible features.
-- `PATCH`: backward-compatible fixes and docs corrections.
-
-On each published GitHub Release:
-
-- tag `vX.Y.Z` is the source of truth,
-- GHCR images are published with `vX.Y.Z` and `latest`.
-
-## Architecture Notes
-
-- `apps/api`: FastAPI backend and async analysis pipeline.
-- `apps/web`: React + Vite UI.
-- `packages/analyzer-core`: analysis engine and aggregators.
-- `packages/api-contracts`: generated TypeScript contracts.
+Do not disclose vulnerabilities in public issues.
+Use [SECURITY.md](SECURITY.md).

@@ -14,8 +14,9 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @chat-analyzer/web build
 
 FROM nginx:1.27-alpine
-COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
+ENV NGINX_CLIENT_MAX_BODY_SIZE=100m
+COPY infra/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "printf 'window.__CHAT_ANALYZER_API_BASE_URL__ = \"%s\";\\n' \"${VITE_API_BASE_URL:-/api}\" > /usr/share/nginx/html/runtime-config.js; nginx -g 'daemon off;'"]
