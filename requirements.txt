@@ -1,11 +1,8 @@
 pandas
-plotly
-kaleido
-jinja2
 spacy
-networkx
-pyvis
-tzlocal
 ijson
 emoji
 pytest
+fastapi
+uvicorn[standard]
+python-multipart

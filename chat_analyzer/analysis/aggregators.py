@@ -1,4 +1,3 @@
-# === Standard library ===
 import logging
 import random
 from collections import Counter, defaultdict
@@ -6,7 +5,6 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Dict
 
-# === Third-party ===
 import numpy as np
 import pandas as pd
 
@@ -441,7 +439,6 @@ class DialogAggregator:
                         effective_gap_min = (dt - target_dt).total_seconds() / 60.0
 
                 if target_sender is None:
-                    # Fallback для экспортов без reply_to_message_id.
                     if sender != self.prev_sender and 0 < gap_min <= self.response_limit_minutes:
                         target_sender = self.prev_sender
                         effective_gap_min = gap_min
@@ -686,8 +683,6 @@ class SocialAggregator:
 
             reactions = row["reactions"] if isinstance(row["reactions"], list) else []
             if reactions:
-                # В стандартном Telegram-экспорте неизвестно, кто поставил реакцию.
-                # Корректно считаем только реакции, полученные автором сообщения.
                 self.reactions_received[sender] += len(reactions)
 
             self.prev_sender = sender

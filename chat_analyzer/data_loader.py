@@ -1,13 +1,11 @@
-# === Standard library ===
 import json
 import logging
 import os
-import warnings
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, BinaryIO, Dict, Iterator, List, Optional
 
-# === Third-party ===
 import pandas as pd
 
 try:
@@ -301,21 +299,26 @@ def iter_chat_chunks(file_path: str, chunk_size: int = 50_000) -> Iterator[pd.Da
         yield _rows_to_dataframe(rows)
 
 
-def load_and_process_chat_data(file_path: str, chunk_size: int = 50_000) -> pd.DataFrame:
-    """Deprecated: используйте iter_chat_messages/iter_chat_chunks."""
-    warnings.warn(
-        "load_and_process_chat_data устарела, используйте iter_chat_chunks/iter_chat_messages",
-        DeprecationWarning,
-        stacklevel=2,
-    )
+def iter_chat_chunks_from_fileobj(file_obj: BinaryIO, chunk_size: int = 50_000, suffix: str = ".json") -> Iterator[pd.DataFrame]:
+    """
+    Итерирует чанки DataFrame из file-like объекта через временный файл.
 
-    chunks = [chunk for chunk in iter_chat_chunks(file_path=file_path, chunk_size=chunk_size) if not chunk.empty]
-    if not chunks:
-        raise EmptyDataError("Нет текстовых сообщений типа 'message' с отправителем для анализа.")
+    Это удобный адаптер для интеграции с UploadFile/FastAPI без изменения
+    существующей stream-first логики iter_chat_chunks(file_path=...).
+    """
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp_path = tmp.name
+        while True:
+            block = file_obj.read(1024 * 1024)
+            if not block:
+                break
+            tmp.write(block)
 
-    df = pd.concat(chunks, ignore_index=True)
-    if df.empty:
-        raise EmptyDataError("Не найдено сообщений после фильтрации.")
+    try:
+        yield from iter_chat_chunks(tmp_path, chunk_size=chunk_size)
+    finally:
+        try:
+            os.remove(tmp_path)
+        except FileNotFoundError:
+            pass
 
-    logger.info("Загружено и обработано %s сообщений.", len(df))
-    return df

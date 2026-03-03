@@ -1,4 +1,3 @@
-# === Standard library ===
 import logging
 import os
 import re
@@ -52,7 +51,7 @@ def _load_model(model_name: str):
         return None
     try:
         return spacy.load(model_name, disable=["parser", "ner", "textcat"])
-    except Exception:
+    except (OSError, ImportError, AttributeError, ValueError):
         logger.warning("spaCy model %s недоступна, используется fallback tokenizer.", model_name)
         return None
 
@@ -67,7 +66,6 @@ def get_nlp_models() -> tuple:
     en = _load_model("en_core_web_sm")
 
     if ru is None and en is None:
-        # fallback на blank-токенизатор, чтобы пайплайн не падал
         ru = spacy.blank("ru")
         en = spacy.blank("en")
     return (ru, en)
@@ -118,7 +116,6 @@ def process_texts_spacy(
     if ru_model is None and en_model is None:
         return _fallback_tokenize(texts, min_len=min_len)
 
-    # Простая эвристика роутинга: текст с кириллицей -> ru, иначе en.
     ru_indices: List[int] = []
     en_indices: List[int] = []
     clean_texts = [_clean_text(t) for t in texts]
@@ -174,5 +171,10 @@ def update_emoji_counter(counter: Counter, texts: Sequence[str]) -> None:
 
 
 def default_workers() -> int:
-    cpu = os.cpu_count() or 2
-    return max(cpu - 1, 1)
+    configured = os.getenv("CHAT_ANALYZER_NLP_WORKERS")
+    if configured:
+        try:
+            return max(1, int(configured))
+        except ValueError:
+            logger.warning("Некорректный CHAT_ANALYZER_NLP_WORKERS=%s, используется 1", configured)
+    return 1
