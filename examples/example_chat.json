@@ -1,0 +1,44 @@
+{
+  "name": "Synthetic Demo Chat",
+  "type": "personal_chat",
+  "id": 1000001,
+  "messages": [
+    {
+      "id": 1,
+      "type": "message",
+      "date": "2026-03-01T09:00:00",
+      "from": "Alice",
+      "from_id": "user100",
+      "text": "Morning! Let's review release tasks today."
+    },
+    {
+      "id": 2,
+      "type": "message",
+      "date": "2026-03-01T09:01:12",
+      "from": "Bob",
+      "from_id": "user101",
+      "text": "Sure, I will handle the Docker image pipeline."
+    },
+    {
+      "id": 3,
+      "type": "message",
+      "date": "2026-03-01T09:03:44",
+      "from": "Alice",
+      "from_id": "user100",
+      "text": [
+        "Great. Please tag release as ",
+        { "type": "bold", "text": "v0.1.0" },
+        "."
+      ]
+    },
+    {
+      "id": 4,
+      "type": "message",
+      "date": "2026-03-01T09:04:50",
+      "from": "Bob",
+      "from_id": "user101",
+      "text": "Done. I also prepared docs updates.",
+      "reactions": ["👍", "🚀"]
+    }
+  ]
+}

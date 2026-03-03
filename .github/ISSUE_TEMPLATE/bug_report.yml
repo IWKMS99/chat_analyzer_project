@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible problem in Chat Analyzer
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report. Please include enough detail to reproduce.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps, inputs, and commands.
+      placeholder: |
+        1. Run ...
+        2. Upload ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Monorepo version or image tag (for example v0.1.0)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Relevant logs, stack traces, or UI screenshots.
+      render: shell

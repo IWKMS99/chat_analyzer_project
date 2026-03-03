@@ -37,6 +37,9 @@ jobs:
       - name: Run pytest
         run: uv run pytest -q
 
+      - name: Validate example dataset JSON
+        run: uv run python scripts/ci/validate_example_chat.py
+
   frontend-quality:
     name: Frontend Build & Audit (Node 20 + pnpm)
     runs-on: ubuntu-latest

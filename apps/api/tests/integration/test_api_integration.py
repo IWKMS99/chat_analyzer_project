@@ -75,7 +75,7 @@ class FakeRunnerNoop:
 def _build_test_client(tmp_path: Path, max_upload_bytes: int = 1024 * 1024, complete_immediately: bool = True) -> TestClient:
     settings = Settings(
         app_name="test",
-        app_version="2.0.0",
+        app_version="0.1.0",
         debug=False,
         cors_origins=[],
         max_upload_bytes=max_upload_bytes,
