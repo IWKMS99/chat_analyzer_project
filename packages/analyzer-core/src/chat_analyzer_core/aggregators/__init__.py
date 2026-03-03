@@ -4,7 +4,7 @@ from .base import BaseAggregator
 from .dialog import DialogAggregator
 from .message import MessageAggregator
 from .models import CoreStats
-from .nlp import NlpAggregator
+from .nlp_aggregator import NlpAggregator
 from .social import SocialAggregator
 from .summary import SummaryAggregator
 from .temporal import TemporalAggregator

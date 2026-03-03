@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import pandas as pd
 
-from chat_analyzer_core.analysis.aggregators import (
+from chat_analyzer_core.aggregators import (
     ActivityAggregator,
     AnomalyAggregator,
     DialogAggregator,

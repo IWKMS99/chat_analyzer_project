@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from chat_analyzer_core.analysis.aggregators import AnomalyAggregator, DialogAggregator, SocialAggregator
+from chat_analyzer_core.aggregators import AnomalyAggregator, DialogAggregator, SocialAggregator
 from chat_analyzer_core.data_loader import iter_chat_chunks
 from chat_analyzer_api.orchestration.analyzer_flow import localize_chunk
 

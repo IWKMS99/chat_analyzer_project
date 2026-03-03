@@ -1,4 +1,4 @@
-from chat_analyzer_core.analysis.nlp_processor import extract_emojis_from_text, process_texts_spacy
+from chat_analyzer_core.engine.nlp_processor import extract_emojis_from_text, process_texts_spacy
 
 
 def test_spacy_processing_returns_lemmas_or_tokens():

@@ -3,7 +3,7 @@ from typing import Dict
 
 import pandas as pd
 
-from chat_analyzer_core.analysis.nlp_processor import default_workers, process_texts_spacy, update_emoji_counter
+from chat_analyzer_core.engine.nlp_processor import default_workers, process_texts_spacy, update_emoji_counter
 
 from .base import BaseAggregator
 
