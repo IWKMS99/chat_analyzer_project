@@ -32,7 +32,7 @@ def dataframe_to_records(df: pd.DataFrame, include_index: bool = False, index_na
         return []
 
     out = df.copy()
-    if include_index or not isinstance(out.index, pd.RangeIndex) or out.index.name is not None:
+    if include_index:
         out = out.reset_index()
         if index_name and "index" in out.columns:
             out = out.rename(columns={"index": index_name})
