@@ -4,7 +4,8 @@ import type { DashboardResponse } from "@chat-analyzer/api-contracts";
 import { DatasetChart } from "./DatasetChart";
 import { DatasetTable } from "./DatasetTable";
 import { KpiCard } from "./KpiCard";
-import { buildDatasetCards, safeString, summaryKpis } from "../utils";
+import { safeString } from "../lib/formatters";
+import { buildDatasetCards, summaryKpis } from "../lib/transformers";
 
 interface Props {
   dashboard: DashboardResponse;

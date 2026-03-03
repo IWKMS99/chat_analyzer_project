@@ -13,7 +13,7 @@ import {
 } from "recharts";
 
 import type { DashboardWidget } from "@chat-analyzer/api-contracts";
-import { buildChartModel } from "../utils";
+import { buildChartModel } from "../lib/transformers";
 
 interface Props {
   rows: Array<Record<string, unknown>>;

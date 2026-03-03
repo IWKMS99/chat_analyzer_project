@@ -1,5 +1,5 @@
 import { cn } from "../../../lib/utils";
-import { formatMaybeDate, humanize } from "../utils";
+import { formatMaybeDate, humanize } from "../lib/formatters";
 
 interface Props {
   datasetId: string;
